@@ -1,0 +1,315 @@
+             NUTRIRESQ — COMPLETE ACTIVITY DIAGRAM
+             ====================================
+
+
+                         +-------------------+
+                         |       START       |
+                         +---------+---------+
+                                   |
+                                   v
+                  +--------------------------------+
+                  | Operations Coordinator opens   |
+                  | the NutriResQ application      |
+                  +---------------+----------------+
+                                  |
+                                  v
+                  +--------------------------------+
+                  | Load dashboard and saved       |
+                  | scenarios from the system      |
+                  +---------------+----------------+
+                                  |
+                                  v
+                  +--------------------------------+
+                  | Select existing scenario OR    |
+                  | create a new scenario          |
+                  +---------------+----------------+
+                                  |
+                                  v
+                  +--------------------------------+
+                  | Load scenario data             |
+                  |                                |
+                  | - Locations                    |
+                  | - Available roads              |
+                  | - Food batches                 |
+                  | - Recipient requirements       |
+                  | - Vehicle capacities           |
+                  +---------------+----------------+
+                                  |
+                                  v
+                  +--------------------------------+
+                  | Configure or edit scenario     |
+                  | inputs, if required            |
+                  +---------------+----------------+
+                                  |
+                                  v
+                  +--------------------------------+
+                  | Validate scenario              |
+                  |                                |
+                  | - Valid locations and IDs      |
+                  | - Valid coordinates            |
+                  | - Valid road costs/status      |
+                  | - Valid food weights/values    |
+                  | - Valid vehicle capacities     |
+                  | - Food eligibility/expiry      |
+                  +---------------+----------------+
+                                  |
+                                  v
+                         +----------------+
+                         | Scenario valid?|
+                         +-------+--------+
+                                 |
+                    +------------+------------+
+                    |                         |
+                   NO                        YES
+                    |                         |
+                    v                         v
+       +--------------------------+   +-------------------------+
+       | Display validation       |   | Prepare working copy    |
+       | errors to coordinator    |   | of the scenario         |
+       +------------+-------------+   +------------+------------+
+                    |                              |
+                    v                              v
+       +--------------------------+   +-------------------------+
+       | Correct invalid inputs   |   | Record run configuration|
+       +------------+-------------+   | and start timing        |
+                    |                 +------------+------------+
+                    +-------> REVALIDATE           |
+                                                   v
+                                    +---------------------------+
+                                    | STAGE 1: NETWORK ANALYSIS |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Construct road graph from |
+                                    | available road connections|
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Execute A* Search         |
+                                    | for required paths        |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Check path reachability   |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                         +----------------+
+                                         | Destination    |
+                                         | reachable?     |
+                                         +-------+--------+
+                                                 |
+                                      +----------+----------+
+                                      |                     |
+                                     NO                    YES
+                                      |                     |
+                                      v                     v
+                         +----------------------+  +---------------------+
+                         | Record unreachable   |  | Store valid path    |
+                         | destination and      |  | and path cost       |
+                         | affected operations  |  +----------+----------+
+                         +----------+-----------+             |
+                                    |                         |
+                                    +------------+------------+
+                                                 |
+                                                 v
+                                    +---------------------------+
+                                    | Execute Closest Pair      |
+                                    | divide-and-conquer        |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Store closest locations   |
+                                    | and straight-line distance|
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | STAGE 2: FOOD ALLOCATION  |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Filter expired/ineligible |
+                                    | food batches              |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Identify packages that    |
+                                    | cannot fit any vehicle    |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Exclude oversized packages|
+                                    | and record exclusion      |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Execute Multiple Knapsack |
+                                    | Dynamic Programming       |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Backtrack DP decisions    |
+                                    | to reconstruct assignments|
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Verify allocation rules   |
+                                    |                           |
+                                    | - No duplicate packages   |
+                                    | - Capacity not exceeded   |
+                                    | - Feasible partial result |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                         +----------------+
+                                         | Allocation     |
+                                         | feasible?      |
+                                         +-------+--------+
+                                                 |
+                                      +----------+----------+
+                                      |                     |
+                                     NO                    YES
+                                      |                     |
+                                      v                     v
+                         +----------------------+  +---------------------+
+                         | Flag allocation or   |  | Store assignments,  |
+                         | input inconsistency  |  | impact and capacity |
+                         +----------+-----------+  +----------+----------+
+                                    |                         |
+                                    +------------+------------+
+                                                 |
+                                                 v
+                                    +---------------------------+
+                                    | STAGE 3: ROUTE OPTIMIZATION|
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Derive pickup and delivery|
+                                    | stops from assignments    |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Build available-road cost |
+                                    | information for each leg  |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Execute Ant Colony        |
+                                    | Optimization (ACO)        |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Evaluate candidate routes |
+                                    | using road travel costs   |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Validate route feasibility|
+                                    | and unreachable stops     |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Record stop order, route  |
+                                    | cost and route status     |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | STAGE 4: RESULTS          |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Calculate final metrics   |
+                                    |                           |
+                                    | - Food allocated          |
+                                    | - Total impact            |
+                                    | - Route cost              |
+                                    | - Fleet utilization       |
+                                    | - Runtime                 |
+                                    | - Unreachable locations   |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Save optimization run,    |
+                                    | configuration snapshot,   |
+                                    | assignments and routes    |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Display dashboard, map,   |
+                                    | allocations, routes and   |
+                                    | analytics to coordinator  |
+                                    +-------------+-------------+
+                                                  |
+                                                  v
+                                    +---------------------------+
+                                    | Choose next action        |
+                                    +-------------+-------------+
+                                                  |
+                        +-------------------------+--------------------+
+                        |                         |                    |
+                        v                         v                    v
+             +---------------------+ +----------------------+ +--------------------+
+             | View saved run or   | | Run algorithm        | | Configure scenario |
+             | inspect results     | | comparisons          | | simulation         |
+             +----------+----------+ +----------+-----------+ +---------+----------+
+                        |                       |                       |
+                        |                       v                       v
+                        |          +--------------------------+ +---------------------+
+                        |          | Run baseline algorithms  | | Modify working copy |
+                        |          |                          | | of scenario         |
+                        |          | A* vs Dijkstra           | +----------+----------+
+                        |          | DP vs Greedy             |            |
+                        |          | Closest Pair vs Brute    |            v
+                        |          | ACO vs Nearest Neighbor  | +---------------------+
+                        |          +------------+-------------+ | Validate modified   |
+                        |                       |               | scenario            |
+                        |                       v               +----------+----------+
+                        |          +--------------------------+            |
+                        |          | Store measured runtimes, |            v
+                        |          | costs and comparisons    | +---------------------+
+                        |          +------------+-------------+ | Run affected or      |
+                        |                       |               | integrated algorithms|
+                        |                       v               +----------+----------+
+                        |          +--------------------------+            |
+                        |          | Display benchmark results|            v
+                        |          +------------+-------------+ +---------------------+
+                        |                       |               | Save simulation run |
+                        |                       |               | and compare results  |
+                        |                       |               +----------+----------+
+                        |                       |                          |
+                        +-----------------------+--------------------------+
+                                                |
+                                                v
+                                      +--------------------+
+                                      | Continue working?  |
+                                      +---------+----------+
+                                                |
+                                     +----------+----------+
+                                     |                     |
+                                    YES                    NO
+                                     |                     |
+                                     v                     v
+                              Return to dashboard   +-------------+
+                                                    |     END     |
+                                                    +-------------+
