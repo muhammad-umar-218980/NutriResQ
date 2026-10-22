@@ -1,0 +1,139 @@
+                  NUTRIRESQ — DEPLOYMENT DIAGRAM
+                  =============================
+
++-----------------------------------------------------------+
+| <<device>> User's Computer / Laptop / Mobile              |
+|                                                           |
+|  +-----------------------------------------------------+  |
+|  | <<executionEnvironment>> Web Browser                |  |
+|  |                                                     |  |
+|  |  +-----------------------------------------------+  |  |
+|  |  | NutriResQ Frontend                            |  |  |
+|  |  | React + TypeScript                            |  |  |
+|  |  | Tailwind CSS                                  |  |  |
+|  |  |                                               |  |  |
+|  |  | - Optimization Dashboard                      |  |  |
+|  |  | - Network Explorer                            |  |  |
+|  |  | - Food Allocation View                        |  |  |
+|  |  | - Route Planner                               |  |  |
+|  |  | - Algorithm Comparison Lab                    |  |  |
+|  |  | - Scenario Simulator                          |  |  |
+|  |  | - Run History                                 |  |  |
+|  |  +-----------------------------------------------+  |  |
+|  |                                                     |  |
+|  |  +-------------------+  +------------------------+  |  |
+|  |  | Leaflet Map       |  | Recharts               |  |  |
+|  |  | + OpenStreetMap   |  | Analytics Charts       |  |  |
+|  |  +-------------------+  +------------------------+  |  |
+|  +-----------------------------------------------------+  |
++-----------------------------+-----------------------------+
+                              |
+                              | HTTPS / REST API (JSON)
+                              | Requests and responses
+                              v
++-----------------------------------------------------------+
+| <<node>> Node-Compatible Hosting Platform                 |
+| Example: Render or another compatible Node.js host        |
+|                                                           |
+|  +-----------------------------------------------------+  |
+|  | <<executionEnvironment>> Node.js                    |  |
+|  |                                                     |  |
+|  |  +-----------------------------------------------+  |  |
+|  |  | Express REST API                              |  |  |
+|  |  |                                               |  |  |
+|  |  | - Scenario endpoints                          |  |  |
+|  |  | - Optimization endpoint                       |  |  |
+|  |  | - Algorithm endpoints                         |  |  |
+|  |  | - Benchmark endpoints                         |  |  |
+|  |  | - Simulation endpoints                        |  |  |
+|  |  +----------------------+------------------------+  |  |
+|  |                         |                           |  |
+|  |                         v                           |  |
+|  |  +-----------------------------------------------+  |  |
+|  |  | Optimization Service                          |  |  |
+|  |  |                                               |  |  |
+|  |  | 1. Validate scenario                          |  |  |
+|  |  | 2. Analyze road network                       |  |  |
+|  |  | 3. Allocate food                              |  |  |
+|  |  | 4. Optimize routes                            |  |  |
+|  |  | 5. Calculate metrics                          |  |  |
+|  |  | 6. Save and return results                    |  |  |
+|  |  +----------------------+------------------------+  |  |
+|  |                         |                           |  |
+|  |                         v                           |  |
+|  |  +-----------------------------------------------+  |  |
+|  |  | JavaScript Algorithm Engine                   |  |  |
+|  |  |                                               |  |  |
+|  |  | Core algorithms:                              |  |  |
+|  |  | - A* Search                                   |  |  |
+|  |  | - Multiple Knapsack DP                        |  |  |
+|  |  | - Closest Pair (Divide and Conquer)           |  |  |
+|  |  | - Ant Colony Optimization                     |  |  |
+|  |  |                                               |  |  |
+|  |  | Comparison baselines:                         |  |  |
+|  |  | - Dijkstra                                    |  |  |
+|  |  | - Greedy Knapsack                             |  |  |
+|  |  | - Brute-force Closest Pair                    |  |  |
+|  |  | - Nearest Neighbor                            |  |  |
+|  |  +-----------------------------------------------+  |  |
+|  |                         |                           |  |
+|  |                         v                           |  |
+|  |  +-----------------------------------------------+  |  |
+|  |  | PostgreSQL Data Access Layer (`pg`)           |  |  |
+|  |  +-----------------------------------------------+  |  |
+|  +-----------------------------------------------------+  |
++-----------------------------+-----------------------------+
+                              |
+                              | PostgreSQL connection
+                              | TLS / encrypted connection
+                              | Server-side credentials
+                              v
++-----------------------------------------------------------+
+| <<node>> Neon Cloud                                       |
+|                                                           |
+|  +-----------------------------------------------------+  |
+|  | <<database>> PostgreSQL                             |  |
+|  |                                                     |  |
+|  | - locations                                         |  |
+|  | - roads                                             |  |
+|  | - donations / food batches                          |  |
+|  | - recipients                                        |  |
+|  | - vehicles                                          |  |
+|  | - scenarios                                         |  |
+|  | - scenario_changes                                  |  |
+|  | - optimization_runs                                 |  |
+|  | - vehicle_allocations                               |  |
+|  | - routes and route_stops                            |  |
+|  | - algorithm_benchmarks                              |  |
+|  +-----------------------------------------------------+  |
++-----------------------------------------------------------+
+
+
+EXTERNAL / SUPPORTING SERVICES
+==============================
+
++-----------------------------------------------------------+
+| Vercel                                                    |
+| Hosts the compiled React frontend                         |
++-----------------------------------------------------------+
+
++-----------------------------------------------------------+
+| OpenStreetMap Tile Service                                |
+| Supplies map tiles to Leaflet                             |
+| Does NOT execute NutriResQ's routing algorithms           |
++-----------------------------------------------------------+
+
+
+COMMUNICATION SUMMARY
+=====================
+
+Browser  <---- HTTPS / JSON ---->  Express REST API
+
+Express API  <---- internal calls ---->  Algorithm Engine
+
+Express API  <---- database queries -->  Neon PostgreSQL
+
+Browser  <---- map tile requests ----->  OpenStreetMap
+
+Frontend is public-facing.
+Database credentials remain exclusively on the backend.
