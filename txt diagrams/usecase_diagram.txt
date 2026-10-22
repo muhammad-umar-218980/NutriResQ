@@ -1,0 +1,137 @@
+                  NUTRIRESQ — USE CASE DIAGRAM
+                  ============================
+
+ACTORS
+======
+
+  +-------------------------+
+  | Operations Coordinator  |
+  | (Primary System User)   |
+  +------------+------------+
+               |
+               | Interacts with
+               v
+
++----------------------------------------------------------------+
+|                         NUTRIRESQ SYSTEM                       |
+|                                                                |
+|  SCENARIO MANAGEMENT                                           |
+|  -------------------                                           |
+|                                                                |
+|   (UC-01) Create Scenario                                      |
+|        |                                                       |
+|        +----> (UC-02) Edit Scenario Inputs                     |
+|        |                                                       |
+|        +----> (UC-03) View Saved Scenarios                     |
+|                                                                |
+|   (UC-04) Manage Road Availability                             |
+|   (UC-05) Manage Food Supply and Eligibility                   |
+|   (UC-06) Manage Vehicle Availability and Capacity             |
+|   (UC-07) Inspect Donors and Recipient Locations               |
+|                                                                |
+|                                                                |
+|  OPTIMIZATION                                                  |
+|  ------------                                                  |
+|                                                                |
+|   (UC-08) Validate Scenario                                    |
+|        ^                                                       |
+|        | <<include>>                                           |
+|   (UC-09) Run Integrated Optimization                          |
+|        |                                                       |
+|        +---- <<include>> ----> (UC-10) Calculate A* Paths      |
+|        |                                                       |
+|        +---- <<include>> ----> (UC-11) Analyze Closest Pair    |
+|        |                                                       |
+|        +---- <<include>> ----> (UC-12) Allocate Food using DP  |
+|        |                                                       |
+|        +---- <<include>> ----> (UC-13) Optimize Stops using ACO|
+|        |                                                       |
+|        +---- <<include>> ----> (UC-14) Calculate Metrics       |
+|        |                                                       |
+|        +---- <<include>> ----> (UC-15) Save Optimization Run   |
+|                                                                |
+|                                                                |
+|  RESULTS AND VISUALIZATION                                     |
+|  -------------------------                                     |
+|                                                                |
+|   (UC-16) View Optimization Dashboard                          |
+|   (UC-17) View Interactive Network Map                         |
+|   (UC-18) Inspect Vehicle Allocations                          |
+|   (UC-19) Inspect Routes and Unreachable Stops                 |
+|   (UC-20) View Runtime and Fleet Utilization                   |
+|   (UC-21) View Previous Optimization Runs                      |
+|                                                                |
+|                                                                |
+|  ALGORITHM COMPARISON LABORATORY                               |
+|  ------------------------------                                |
+|                                                                |
+|   (UC-22) Run Algorithm Benchmarks                             |
+|        |                                                       |
+|        +---- <<include>> ----> (UC-23) Compare A* vs Dijkstra  |
+|        +---- <<include>> ----> (UC-24) Compare DP vs Greedy    |
+|        +---- <<include>> ----> (UC-25) Compare Closest Pair    |
+|        |                         vs Brute Force                |
+|        +---- <<include>> ----> (UC-26) Compare ACO vs          |
+|                                  Nearest Neighbor              |
+|                                                                |
+|   (UC-27) View Benchmark Results                               |
+|                                                                |
+|                                                                |
+|  SCENARIO SIMULATION                                           |
+|  --------------------                                          |
+|                                                                |
+|   (UC-28) Configure Simulation                                 |
+|        |                                                       |
+|        +----> Close Roads                                      |
+|        +----> Reduce Available Vehicles                        |
+|        +----> Reduce Food Supply                               |
+|        +----> Change Recipient Set                             |
+|        +----> Mark Food Ineligible / Expired                   |
+|                                                                |
+|   (UC-29) Run Simulation                                       |
+|        |                                                       |
+|        +---- <<include>> ----> Validate Modified Scenario      |
+|        +---- <<include>> ----> Re-run Affected Algorithms      |
+|        +---- <<include>> ----> Save Simulation Results         |
+|                                                                |
+|   (UC-30) Compare Before-and-After Results                     |
+|                                                                |
++----------------------------------------------------------------+
+               ^
+               |
+               | Association with applicable use cases
+               |
+  +------------+------------+
+  | Operations Coordinator  |
+  +-------------------------+
+
+
+EXTERNAL SYSTEM
+===============
+
+  +-------------------------+
+  | OpenStreetMap Tile      |
+  | Service                 |
+  +------------+------------+
+               |
+               | Supplies map tiles
+               v
+       (UC-17) View Interactive
+               Network Map
+
+
+ACTOR SCOPE
+===========
+
+Primary actor:
+  Operations Coordinator
+
+Modeled as system data, not mandatory interactive actors:
+  - Food donors
+  - Recipient organizations
+  - Delivery vehicles
+
+Optional future actors:
+  - Donor representative (if donor portal is added)
+  - Recipient representative (if recipient portal is added)
+  - Driver (if a driver portal is added)
