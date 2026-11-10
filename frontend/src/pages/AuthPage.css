@@ -262,13 +262,18 @@
   padding: clamp(28px, 3.1vw, 44px);
   /* Opaque, so whichever form is on top fully covers the one beneath it. */
   background: var(--auth-surface);
-  transition: transform 0.6s ease-in-out;
+  /* Position slides the whole time; the visible form holds until the midpoint
+     and then swaps in a single frame, while the rust overlay covers it. */
+  transition:
+    transform 0.6s ease-in-out,
+    opacity 0s linear 0.3s;
 }
 
-/* Only position animates. Cross-fading two opaque forms is what made the
-   outgoing inputs show through the incoming panel. */
+/* Only one form is ever painted. Each panel is fully opaque or fully clear, so
+   the outgoing inputs can never show through the one arriving. */
 .auth-panel--login {
   z-index: 2;
+  opacity: 1;
   transform: translateX(0);
 }
 
@@ -277,18 +282,17 @@
   opacity: 0;
   pointer-events: none;
   transform: translateX(0);
-  /* The swap is stepped, not faded. Opacity holds for the first half of the
-     slide, then flips in one frame — at exactly the moment the rust overlay
-     covers the panel — so the two forms are never painted over each other. */
-  transition:
-    transform 0.6s ease-in-out,
-    opacity 0s linear 0.3s;
 }
 
+/* Switching to sign up: the sign-in form keeps sliding out while the
+   registration form stays hidden until the wipe covers it. */
 .auth-card.is-signup .auth-panel--login {
+  opacity: 0;
   transform: translateX(100%);
 }
 
+/* Switching to sign in: the registration form keeps sliding out and only
+   gives way at the midpoint, instead of being replaced on the first frame. */
 .auth-card.is-signup .auth-panel--signup {
   z-index: 5;
   opacity: 1;
