@@ -143,6 +143,78 @@ export function efficientClosestPair(P: Point2D[], Q: Point2D[]): number {
 }
 
 /**
+ * Pair-tracking divide and conquer used by `findClosestPair`.
+ *
+ * Points are wrapped with their original index so duplicate coordinates are
+ * still distinct points. Returns the actual pair, not just the distance.
+ */
+interface IndexedPoint extends Point2D {
+  index: number;
+}
+
+interface IndexedPairResult {
+  distance: number;
+  a: IndexedPoint | null;
+  b: IndexedPoint | null;
+}
+
+function closestPairEntries(P: IndexedPoint[], Q: IndexedPoint[]): IndexedPairResult {
+  const n = P.length;
+
+  if (n <= 1) {
+    return { distance: Infinity, a: null, b: null };
+  }
+
+  // Base case: exhaustive search over at most three points.
+  if (n <= 3) {
+    let best: IndexedPairResult = { distance: Infinity, a: null, b: null };
+    for (let i = 0; i < P.length; i++) {
+      for (let j = i + 1; j < P.length; j++) {
+        const d = distance(P[i], P[j]);
+        if (d < best.distance) best = { distance: d, a: P[i], b: P[j] };
+      }
+    }
+    return best;
+  }
+
+  const mid = Math.ceil(n / 2);
+  const Pl = P.slice(0, mid);
+  const Pr = P.slice(mid);
+
+  // Membership by original index, so duplicated coordinates stay distinct.
+  const leftIndexes = new Set(Pl.map((point) => point.index));
+  const Ql: IndexedPoint[] = [];
+  const Qr: IndexedPoint[] = [];
+  for (const point of Q) {
+    if (leftIndexes.has(point.index)) Ql.push(point);
+    else Qr.push(point);
+  }
+
+  const left = closestPairEntries(Pl, Ql);
+  const right = closestPairEntries(Pr, Qr);
+  let best = left.distance <= right.distance ? left : right;
+
+  const midX = P[mid - 1].x;
+  const strip = Q.filter((point) => Math.abs(point.x - midX) < best.distance);
+  const bestSquared = best.distance * best.distance;
+
+  for (let i = 0; i < strip.length - 1; i++) {
+    for (
+      let k = i + 1;
+      k < strip.length && (strip[k].y - strip[i].y) ** 2 < bestSquared;
+      k++
+    ) {
+      const d = distance(strip[i], strip[k]);
+      if (d < best.distance) {
+        best = { distance: d, a: strip[i], b: strip[k] };
+      }
+    }
+  }
+
+  return best;
+}
+
+/**
  * Find the closest pair among a set of points using the divide-and-conquer algorithm.
  *
  * @param points Array of 2D points {x, y} with planar Euclidean coordinates
@@ -151,10 +223,13 @@ export function efficientClosestPair(P: Point2D[], Q: Point2D[]): number {
  * Pre-processing:
  * 1. P = points sorted by x-coordinate ascending
  * 2. Q = points sorted by y-coordinate ascending
- * 3. Call efficientClosestPair(P, Q)
+ * 3. Call the pair-tracking divide-and-conquer helper
+ *
+ * Distance is straight-line Euclidean distance in the projected coordinate
+ * system, not road distance. Callers must label it as such.
  *
  * Special cases handled:
- * - Fewer than 2 points: returns Infinity with undefined pair
+ * - Fewer than 2 points: returns Infinity with null pair
  * - Duplicate coordinates: distance 0 detected correctly
  * - Exactly 2 points: direct distance computation
  * - Exactly 3 points: brute force computation
@@ -168,45 +243,23 @@ export function findClosestPair(points: Point2D[]): {
     return { distance: Infinity, p1: null, p2: null };
   }
 
-  if (points.length === 2) {
-    const d = distance(points[0], points[1]);
-    return { distance: d, p1: points[0], p2: points[1] };
-  }
+  const indexed: IndexedPoint[] = points.map((point, index) => ({
+    x: point.x,
+    y: point.y,
+    index,
+  }));
 
-  if (points.length === 3) {
-    const d = bruteForce(points);
-    // Return the pair with minimum distance
-    let minDist = Infinity;
-    let p1: Point2D | null = null;
-    let p2: Point2D | null = null;
+  // Ties are broken by the original index so the pair is deterministic.
+  const P = [...indexed].sort((a, b) => a.x - b.x || a.y - b.y || a.index - b.index);
+  const Q = [...indexed].sort((a, b) => a.y - b.y || a.x - b.x || a.index - b.index);
 
-    const d01 = distance(points[0], points[1]);
-    const d02 = distance(points[0], points[2]);
-    const d12 = distance(points[1], points[2]);
+  const best = closestPairEntries(P, Q);
 
-    if (d01 <= minDist) {
-      minDist = d01; p1 = points[0]; p2 = points[1];
-    }
-    if (d02 <= minDist) {
-      minDist = d02; p1 = points[0]; p2 = points[2];
-    }
-    if (d12 <= minDist) {
-      minDist = d12; p1 = points[1]; p2 = points[2];
-    }
-
-    return { distance: minDist, p1, p2 };
-  }
-
-  // For 4+ points: use divide and conquer
-  // Pre-sort: P by x-coordinate, Q by y-coordinate
-  const P = [...points].sort((a, b) => a.x - b.x);
-  const Q = [...points].sort((a, b) => a.y - b.y);
-
-  const closestDist = efficientClosestPair(P, Q);
-
-  // Find the actual pair by checking all close pairs within the final d
-  // (simplified: return distance; full pair reconstruction would need more logic)
-  return { distance: closestDist, p1: null, p2: null };
+  return {
+    distance: best.distance,
+    p1: best.a ? points[best.a.index] : null,
+    p2: best.b ? points[best.b.index] : null,
+  };
 }
 
 /**

@@ -1,32 +1,80 @@
-/**
- * Express Application - NutriResQ Backend API.
- * Minimal working version that compiles.
- */
-import express from "express";
-import cors from "cors";
+import cors from 'cors';
+import express from 'express';
+import { env, isProduction } from './config/env';
+import { pingDatabase } from './db/pool';
+import { errorHandler, notFoundHandler } from './middleware/error-handler';
+import { requestId } from './middleware/request-id';
+import { requireTrustedOrigin } from './middleware/csrf';
+import adminRoutes from './routes/admin.routes';
+import algorithmRoutes from './routes/algorithm.routes';
+import authRoutes from './routes/auth.routes';
+import optimizationRoutes from './routes/optimization.routes';
+import portalRoutes from './routes/portal.routes';
+import runRoutes from './routes/run.routes';
+import scenarioRoutes from './routes/scenario.routes';
 
 const app = express();
 
+app.disable('x-powered-by');
+// Needed for req.ip behind a reverse proxy (and for the login rate limiter).
+app.set('trust proxy', 1);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
-  })
+    origin: env.FRONTEND_URL,
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+    exposedHeaders: ['X-Request-Id', 'Retry-After'],
+  }),
 );
 
-app.use(express.json());
+app.use(requestId);
+app.use(express.json({ limit: '1mb' }));
+app.use(requireTrustedOrigin);
 
-// Health check endpoint
-app.get("/", (_req, res) => {
-  res.send("NutriResQ API is running");
-});
+if (!isProduction) {
+  app.use((req, res, next) => {
+    const startedAt = Date.now();
+    res.on('finish', () => {
+      const ms = Date.now() - startedAt;
+      console.log(`[api] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${ms}ms)`);
+    });
+    next();
+  });
+}
 
-
-app.get("/api/health", (_req, res) => {
-  res.status(200).json({
+app.get('/', (_req, res) => {
+  res.json({
     success: true,
-    message: "NutriResQ API is running",
-    timestamp: new Date().toISOString(),
+    data: { name: 'NutriResQ API', version: '2.0.0' },
   });
 });
+
+app.get('/api/health', async (_req, res) => {
+  const database = await pingDatabase();
+
+  res.status(database.ok ? 200 : 503).json({
+    success: database.ok,
+    data: {
+      api: 'up',
+      database: database.ok ? 'up' : 'down',
+      databaseLatencyMs: database.latencyMs,
+      timestamp: new Date().toISOString(),
+    },
+    ...(database.ok ? {} : { error: { code: 'INTERNAL_ERROR', message: 'Database unreachable' } }),
+  });
+});
+
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/scenarios', scenarioRoutes);
+app.use('/api/optimize', optimizationRoutes);
+app.use('/api/runs', runRoutes);
+app.use('/api/algorithms', algorithmRoutes);
+app.use('/api/portal', portalRoutes);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;

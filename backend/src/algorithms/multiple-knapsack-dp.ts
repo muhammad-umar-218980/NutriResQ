@@ -183,6 +183,277 @@ export function validateKnapsackInput(
 }
 
 /**
+ * Multiple-knapsack input: one indivisible package.
+ *
+ * Units (see docs/IMPLEMENTATION_PLAN.md): `weightUnits` is kilograms as an
+ * integer (1 unit = 1 kg), `value` is a non-negative integer objective.
+ */
+export interface MultipleKnapsackItem {
+  /** Caller identifier (for the API this is the donation id). */
+  id?: string;
+  weightUnits: number;
+  value: number;
+}
+
+export interface MultipleKnapsackOptions {
+  /**
+   * Hard ceiling on the mixed-radix state space, `prod(capacity + 1)`.
+   * Exceeding it throws instead of silently falling back to an approximation.
+   */
+  maxStates: number;
+}
+
+export interface MultipleKnapsackAssignment {
+  vehicleIndex: number;
+  /** Indexes into the `items` array passed by the caller. */
+  itemIndexes: number[];
+  totalWeightUnits: number;
+  totalValue: number;
+}
+
+export type MultipleKnapsackUnallocatedReason =
+  | 'invalid'
+  | 'oversized'
+  | 'insufficient_capacity'
+  | 'no_vehicle';
+
+export interface MultipleKnapsackUnallocated {
+  itemIndex: number;
+  reason: MultipleKnapsackUnallocatedReason;
+  detail: string;
+}
+
+export interface MultipleKnapsackResult {
+  /** One entry per vehicle, in the order the capacities were supplied. */
+  assignments: MultipleKnapsackAssignment[];
+  totalValue: number;
+  totalWeightUnits: number;
+  /** Mixed-radix state count actually allocated, `prod(capacity + 1)`. */
+  stateCount: number;
+  maxStates: number;
+  /** True: the DP enumerates every capacity vector, so the result is optimal. */
+  exact: true;
+  unallocated: MultipleKnapsackUnallocated[];
+}
+
+/**
+ * Exact multiple-knapsack DP over the joint capacity vector.
+ *
+ * State = how much of each vehicle's capacity is already used, encoded as a
+ * mixed-radix integer (`radix[v] = prod_{u<v}(capacity[u] + 1)`). For every
+ * package the DP considers skipping it or placing it on each vehicle that still
+ * has room; because packages are processed once, a package can never be
+ * assigned twice. The final state with the greatest total value is decoded back
+ * into per-vehicle item indexes.
+ *
+ * Complexity: O(n * m * prod(capacity + 1)) time, O(n * prod(capacity + 1))
+ * memory for the backtracking rows. When the state space would exceed
+ * `maxStates` this throws a RangeError rather than approximating.
+ */
+export function solveMultipleKnapsack(
+  items: MultipleKnapsackItem[],
+  capacities: number[],
+  options: MultipleKnapsackOptions,
+): MultipleKnapsackResult {
+  const maxStates = options.maxStates;
+
+  if (!Number.isFinite(maxStates) || !Number.isInteger(maxStates) || maxStates <= 0) {
+    throw new RangeError('maxStates must be a positive integer.');
+  }
+
+  const vehicleCount = capacities.length;
+  const capacityLimit: number[] = [];
+
+  for (let v = 0; v < vehicleCount; v++) {
+    const capacity = capacities[v];
+    if (!Number.isInteger(capacity) || capacity < 0) {
+      throw new RangeError(
+        `Vehicle ${v} capacity must be a non-negative integer in the same unit as package weights, got ${capacity}.`,
+      );
+    }
+    capacityLimit.push(capacity);
+  }
+
+  // radix[v] is the state increment for using one more unit of vehicle v.
+  const radix: number[] = [];
+  let stateCount = 1;
+  for (let v = 0; v < vehicleCount; v++) {
+    radix.push(stateCount);
+    stateCount *= capacityLimit[v] + 1;
+    if (stateCount > maxStates) {
+      throw new RangeError(
+        `Multiple-knapsack state space is ${stateCount} states, above maxStates=${maxStates}. ` +
+          'The exact DP was not run; reduce vehicle capacities, remove vehicles, or raise maxStates.',
+      );
+    }
+  }
+
+  const unallocated: MultipleKnapsackUnallocated[] = [];
+  const valid: Array<{ originalIndex: number; weight: number; value: number }> = [];
+  const maxCapacity = capacityLimit.reduce((max, capacity) => Math.max(max, capacity), 0);
+
+  for (let index = 0; index < items.length; index++) {
+    const item = items[index];
+
+    if (!Number.isInteger(item.weightUnits) || item.weightUnits <= 0) {
+      unallocated.push({
+        itemIndex: index,
+        reason: 'invalid',
+        detail: `Weight must be a positive integer number of units, got ${item.weightUnits}.`,
+      });
+      continue;
+    }
+
+    if (!Number.isFinite(item.value) || item.value < 0) {
+      unallocated.push({
+        itemIndex: index,
+        reason: 'invalid',
+        detail: `Value must be a finite non-negative number, got ${item.value}.`,
+      });
+      continue;
+    }
+
+    if (vehicleCount === 0) {
+      unallocated.push({
+        itemIndex: index,
+        reason: 'no_vehicle',
+        detail: 'No vehicles were supplied.',
+      });
+      continue;
+    }
+
+    if (item.weightUnits > maxCapacity) {
+      unallocated.push({
+        itemIndex: index,
+        reason: 'oversized',
+        detail: `Package weighs ${item.weightUnits} units; the largest vehicle holds ${maxCapacity}.`,
+      });
+      continue;
+    }
+
+    valid.push({ originalIndex: index, weight: item.weightUnits, value: item.value });
+  }
+
+  const assignedItems: number[][] = Array.from({ length: vehicleCount }, () => []);
+
+  if (vehicleCount === 0) {
+    return {
+      assignments: [],
+      totalValue: 0,
+      totalWeightUnits: 0,
+      stateCount,
+      maxStates,
+      exact: true,
+      unallocated,
+    };
+  }
+
+  // dp[s] = best value reachable using some subset of the processed packages
+  // and leaving each vehicle with the usage pattern encoded by s. -1 = unreachable.
+  let dp = new Float64Array(stateCount).fill(-1);
+  dp[0] = 0;
+
+  const history: Array<{ vehicle: Int16Array; prevState: Int32Array }> = [];
+
+  for (const item of valid) {
+    const next = Float64Array.from(dp); // skipping the package keeps the state
+    const prevState = new Int32Array(stateCount);
+    const vehicleChoice = new Int16Array(stateCount);
+
+    for (let state = 0; state < stateCount; state++) {
+      if (dp[state] >= 0) prevState[state] = state;
+    }
+
+    for (let state = 0; state < stateCount; state++) {
+      const baseValue = dp[state];
+      if (baseValue < 0) continue;
+
+      let remainder = state;
+      for (let v = 0; v < vehicleCount; v++) {
+        const size = capacityLimit[v] + 1;
+        const used = remainder % size;
+        remainder = Math.floor(remainder / size);
+
+        if (used + item.weight > capacityLimit[v]) continue;
+
+        const nextState = state + radix[v] * item.weight;
+        const candidate = baseValue + item.value;
+        // Strict comparison keeps the lowest vehicle index on ties.
+        if (candidate > next[nextState]) {
+          next[nextState] = candidate;
+          prevState[nextState] = state;
+          vehicleChoice[nextState] = v + 1;
+        }
+      }
+    }
+
+    history.push({ vehicle: vehicleChoice, prevState });
+    dp = next;
+  }
+
+  let bestState = 0;
+  for (let state = 1; state < stateCount; state++) {
+    if (dp[state] > dp[bestState]) bestState = state;
+  }
+
+  let state = bestState;
+  for (let i = valid.length - 1; i >= 0; i--) {
+    const choice = history[i].vehicle[state];
+    if (choice > 0) {
+      assignedItems[choice - 1].push(valid[i].originalIndex);
+      state = history[i].prevState[state];
+    }
+  }
+
+  const validByIndex = new Map(valid.map((item) => [item.originalIndex, item]));
+  const assigned = new Set<number>();
+  let totalValue = 0;
+  let totalWeightUnits = 0;
+
+  const assignments: MultipleKnapsackAssignment[] = assignedItems.map((itemIndexes, vehicleIndex) => {
+    let weight = 0;
+    let value = 0;
+    for (const index of itemIndexes) {
+      const item = validByIndex.get(index)!;
+      weight += item.weight;
+      value += item.value;
+      assigned.add(index);
+    }
+    totalValue += value;
+    totalWeightUnits += weight;
+    return {
+      vehicleIndex,
+      itemIndexes: [...itemIndexes].sort((a, b) => a - b),
+      totalWeightUnits: weight,
+      totalValue: value,
+    };
+  });
+
+  for (const item of valid) {
+    if (!assigned.has(item.originalIndex)) {
+      unallocated.push({
+        itemIndex: item.originalIndex,
+        reason: 'insufficient_capacity',
+        detail:
+          'Not part of the value-maximising assignment: adding it would require exceeding capacity or dropping higher-value packages.',
+      });
+    }
+  }
+
+  unallocated.sort((a, b) => a.itemIndex - b.itemIndex);
+
+  return {
+    assignments,
+    totalValue,
+    totalWeightUnits,
+    stateCount,
+    maxStates,
+    exact: true,
+    unallocated,
+  };
+}
+
+/**
  * Example usage from Chapter 7 PDF specifications.
  * n = 4 items, W = 5 capacity
  * Weights = [null, 2, 1, 3, 2] (1-indexed)
