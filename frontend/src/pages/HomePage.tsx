@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { SyntheticEvent } from 'react'
 import './HomePage.css'
 
-import heroImage from '../assets/landing/hero-produce.jpg'
+import heroImage from '../assets/landing/NutriResQ Food Rescue Logistics.png'
 import problemImage from '../assets/landing/problem-market.jpg'
 import collectImage from '../assets/landing/step-collect-bakery.jpg'
 import matchImage from '../assets/landing/step-match-packages.jpg'
