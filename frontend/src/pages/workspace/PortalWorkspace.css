@@ -1,0 +1,227 @@
+/* Role portal forms, tables and badges.
+   Same tokens and input geometry as the admin workspace so the product reads
+   as one interface; nothing here introduces a new colour or a gradient. */
+
+.portal-form {
+  display: grid;
+  gap: 18px;
+}
+
+.portal-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px 18px;
+}
+
+.portal-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.portal-field {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.portal-field > label,
+.portal-field__label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.portal-field input,
+.portal-field select {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--white);
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--charcoal);
+}
+
+.portal-field input:hover,
+.portal-field select:hover {
+  border-color: var(--olive-light);
+}
+
+.portal-field input:focus-visible,
+.portal-field select:focus-visible {
+  outline: 2px solid var(--rust);
+  outline-offset: 1px;
+  border-color: var(--rust);
+}
+
+.portal-field input:disabled,
+.portal-field select:disabled {
+  background: var(--cream);
+  color: var(--muted);
+}
+
+.portal-field__hint {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.portal-field__error {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--rust-dark);
+  font-weight: 600;
+}
+
+.portal-field--check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.portal-field--check input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--olive);
+}
+
+.portal-field--check label {
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--charcoal);
+}
+
+/* Row actions -------------------------------------------------------------- */
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.row-actions .btn-quiet,
+.row-actions .btn-danger,
+.row-actions .btn-secondary {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  min-height: 32px;
+}
+
+/* Status badges ------------------------------------------------------------ */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--cream);
+  color: var(--muted);
+}
+
+.status-badge--available {
+  border-color: rgba(98, 107, 69, 0.35);
+  background: rgba(98, 107, 69, 0.14);
+  color: var(--olive-dark);
+}
+
+.status-badge--reserved {
+  border-color: rgba(184, 92, 56, 0.3);
+  background: rgba(184, 92, 56, 0.1);
+  color: var(--rust-dark);
+}
+
+.status-badge--expired,
+.status-badge--unavailable {
+  border-color: var(--border);
+  background: var(--warm-beige);
+  color: var(--muted);
+}
+
+/* Small definition lists used by the portal summaries --------------------- */
+
+.portal-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.portal-facts strong {
+  color: var(--charcoal);
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* Blocks spacing ---------------------------------------------------------- */
+
+.card + .card,
+.card + .stat-grid,
+.stat-grid + .card,
+.card + .portal-form {
+  margin-top: 20px;
+}
+
+/* Notices ----------------------------------------------------------------- */
+
+.notice {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--muted);
+  border-radius: var(--radius-m);
+  background: var(--light-beige);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.notice p {
+  margin: 0 0 4px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.notice p:last-child {
+  margin-bottom: 0;
+}
+
+.notice strong {
+  color: var(--charcoal);
+}
+
+.notice--error {
+  border-left-color: var(--rust-dark);
+  background: rgba(184, 92, 56, 0.07);
+}
+
+.notice--warning {
+  border-left-color: var(--olive);
+  background: rgba(98, 107, 69, 0.07);
+}
+

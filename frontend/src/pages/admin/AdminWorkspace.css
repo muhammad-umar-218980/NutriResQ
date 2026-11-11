@@ -1,0 +1,555 @@
+/* Algorithm workspace: run forms, result tables, schematic and benchmarks.
+   Tokens only — no gradients, no glass, no decorative colour beyond the palette. */
+
+/* Forms ------------------------------------------------------------------- */
+
+.opt-form {
+  display: grid;
+  gap: 18px;
+}
+
+.opt-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px 20px;
+}
+
+.opt-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+
+.opt-form__actions .opt-field__hint {
+  flex: 1 1 260px;
+  margin: 0;
+}
+
+.opt-field {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.opt-field > label,
+.opt-field__label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.opt-field input,
+.opt-field select {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--white);
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--charcoal);
+}
+
+.opt-field input:hover,
+.opt-field select:hover {
+  border-color: var(--olive-light);
+}
+
+.opt-field input:focus-visible,
+.opt-field select:focus-visible {
+  outline: 2px solid var(--rust);
+  outline-offset: 1px;
+  border-color: var(--rust);
+}
+
+.opt-field__hint {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.opt-field--inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.opt-field--inline select {
+  width: auto;
+  min-width: 180px;
+}
+
+/* Scenario facts and run metadata ----------------------------------------- */
+
+.scenario-facts,
+.run-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.scenario-facts strong,
+.run-meta strong {
+  color: var(--charcoal);
+  font-variant-numeric: tabular-nums;
+}
+
+.run-meta {
+  gap: 10px 22px;
+  font-size: 0.82rem;
+}
+
+/* Notices ----------------------------------------------------------------- */
+
+.notice--error {
+  border-left-color: var(--rust-dark);
+  background: rgba(184, 92, 56, 0.07);
+}
+
+.notice--warning {
+  border-left-color: var(--olive);
+  background: rgba(98, 107, 69, 0.07);
+}
+
+.notice ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 3px;
+}
+
+.metric-note {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+/* Compact lists inside table cells ---------------------------------------- */
+
+.inline-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.84rem;
+}
+
+.inline-list li {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--warm-beige);
+}
+
+/* Routes ------------------------------------------------------------------ */
+
+.route-list {
+  display: grid;
+  gap: 16px;
+}
+
+.route-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--white);
+  padding: 16px 18px;
+}
+
+.route-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+}
+
+.route-card__head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--charcoal);
+}
+
+.route-card__meta {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.route-stops {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: stop;
+}
+
+.route-stops li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 0.86rem;
+}
+
+.route-stops li:last-child {
+  border-bottom: none;
+}
+
+.route-stops__place {
+  font-weight: 600;
+  color: var(--charcoal);
+}
+
+.route-stops__load {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.route-stops__leg {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stop-type {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--warm-beige);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stop-type--start {
+  border-color: var(--border);
+  background: var(--cream);
+  color: var(--charcoal);
+}
+
+.stop-type--pickup {
+  border-color: rgba(184, 92, 56, 0.35);
+  background: rgba(184, 92, 56, 0.1);
+  color: var(--rust-dark);
+}
+
+.stop-type--delivery {
+  border-color: rgba(98, 107, 69, 0.35);
+  background: rgba(98, 107, 69, 0.12);
+  color: var(--olive-dark);
+}
+
+/* Schematic --------------------------------------------------------------- */
+
+.schematic {
+  margin: 0;
+}
+
+.schematic svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--white);
+}
+
+.schematic__road {
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.schematic__road--closed {
+  stroke: var(--rust);
+  stroke-dasharray: 5 4;
+  opacity: 0.8;
+}
+
+.schematic__leg {
+  stroke-width: 2.5;
+  stroke-opacity: 0.9;
+}
+
+.schematic__location {
+  fill: var(--charcoal);
+  stroke: var(--white);
+  stroke-width: 1.5;
+}
+
+.schematic figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 12px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.schematic__legend-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--charcoal);
+}
+
+.schematic__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schematic__swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--charcoal);
+}
+
+.schematic__swatch--road {
+  background: var(--border);
+}
+
+.schematic__swatch--closed {
+  background: var(--rust);
+}
+
+.schematic__note {
+  flex-basis: 100%;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Benchmarks -------------------------------------------------------------- */
+
+.benchmark-list {
+  display: grid;
+  gap: 18px;
+}
+
+.benchmark {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--white);
+  padding: 16px 18px;
+}
+
+.benchmark__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.benchmark__head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 400;
+  color: var(--charcoal);
+}
+
+.benchmark__baseline {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.benchmark__runtime {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.benchmark__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px 18px;
+  margin: 0 0 12px;
+}
+
+.benchmark__summary dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.benchmark__summary dd {
+  margin: 3px 0 0;
+  font-size: 0.88rem;
+  color: var(--charcoal);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.benchmark-notes {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.benchmark-notes strong {
+  color: var(--charcoal);
+}
+
+/* Algorithm evaluation ---------------------------------------------------- */
+
+.evaluation {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.compare-card {
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--white);
+}
+
+.compare-card h3 {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.compare-card__value {
+  margin: 8px 0 10px;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  line-height: 1;
+  color: var(--charcoal);
+  font-variant-numeric: tabular-nums;
+}
+
+.compare-card .metric-note {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.closest-pair {
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--white);
+}
+
+.closest-pair > p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--charcoal);
+}
+
+.closest-pair__value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--rust-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+.closest-pair .metric-note {
+  margin: 8px 0 0;
+}
+
+/* Tabs -------------------------------------------------------------------- */
+
+.tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tab {
+  min-height: 38px;
+  padding: 8px 15px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--light-beige);
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.tab:hover {
+  border-color: var(--olive-light);
+  color: var(--charcoal);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--rust);
+  outline-offset: 1px;
+}
+
+.tab.is-active {
+  background: var(--rust-dark);
+  border-color: var(--rust-dark);
+  color: var(--light-beige);
+}
+
+/* Vertical rhythm between workspace blocks. Sibling-only, so it cannot stack
+   with the margins already used by the shared page furniture. */
+.card + .card,
+.card + .stat-grid,
+.card + .notice,
+.card + .tab-row,
+.card + .benchmark-list,
+.card + .evaluation,
+.stat-grid + .card,
+.tab-row + .card,
+.notice + .card {
+  margin-top: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab {
+    transition: none;
+  }
+}
