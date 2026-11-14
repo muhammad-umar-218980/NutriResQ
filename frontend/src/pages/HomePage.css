@@ -249,6 +249,7 @@
 
 .landing .brand {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 10px;
 }
@@ -272,11 +273,13 @@
 
 .landing .nav__links {
   display: none;
-  gap: 34px;
+  min-width: 0;
+  gap: clamp(20px, 2.6vw, 34px);
 }
 
 .landing .nav__link {
   position: relative;
+  white-space: nowrap;
   font-size: 0.95rem;
   padding: 6px 0;
 }
@@ -301,11 +304,13 @@
 
 .landing .nav__actions {
   display: none;
+  flex: none;
   align-items: center;
   gap: 24px;
 }
 
 .landing .nav__signin {
+  white-space: nowrap;
   font-size: 0.95rem;
   font-weight: 500;
 }
@@ -379,7 +384,9 @@
   flex: 1;
 }
 
-@media (min-width: 960px) {
+/* The links only fit comfortably from 1000px up; below that the drawer takes
+   over. Labels never wrap, so a longer menu item cannot break the 72px bar. */
+@media (min-width: 1000px) {
   .landing .nav__links,
   .landing .nav__actions {
     display: flex;
@@ -401,7 +408,7 @@
 
 .landing .hero__grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .landing .hero__copy {
@@ -434,7 +441,7 @@
 
 .landing .hero__media {
   position: relative;
-  min-height: 380px;
+  min-height: 0;
   aspect-ratio: 4 / 3;
 }
 
@@ -459,22 +466,36 @@
 }
 
 @media (min-width: 960px) {
+  /* The split is capped instead of tracking the window edge-to-edge. A fully
+     fluid hero always occupies half the window, so its physical size barely
+     changes under browser zoom while the typography rescales - that is what
+     made the photo look frozen. Capping it keeps the hero on the same
+     `rem`-driven sizing model as the rest of the page. */
   .landing .hero__grid {
+    width: 100%;
+    max-width: 96rem;
+    margin-inline: auto;
     grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
-    min-height: calc(100vh - var(--nav-h));
-    max-height: 860px;
+    min-height: 0;
+    max-height: none;
   }
 
   .landing .hero__copy {
-    padding-left: max(var(--gutter), calc((100vw - var(--max)) / 2 + var(--gutter)));
+    padding-left: max(
+      var(--gutter),
+      calc((min(100vw, 96rem) - var(--max)) / 2 + var(--gutter))
+    );
     padding-right: clamp(32px, 4vw, 64px);
     display: flex;
     align-items: center;
   }
 
+  /* Height comes from the copy column and a rem-based floor, never from 100vh,
+     so the image grows and shrinks with the text at every zoom level. The
+     figure stretches to the row, which keeps the panel aligned with the copy. */
   .landing .hero__media {
     aspect-ratio: auto;
-    min-height: 560px;
+    min-height: 34rem;
   }
 }
 
@@ -784,6 +805,14 @@
 .landing .platform {
   padding: var(--section-y) 0;
   background: var(--warm-beige);
+}
+
+/* The platform showcase is desktop-only. `display: none` also removes its
+   section padding, so no empty band is left behind. */
+@media (max-width: 839px) {
+  .landing .platform {
+    display: none;
+  }
 }
 
 .landing .platform__head {

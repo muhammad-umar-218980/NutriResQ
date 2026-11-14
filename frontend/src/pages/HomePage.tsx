@@ -156,7 +156,7 @@ export default function HomePage() {
       if (event.key === 'Escape') setMenuOpen(false)
     }
     const onResize = () => {
-      if (window.innerWidth >= 960) setMenuOpen(false)
+      if (window.matchMedia('(min-width: 1000px)').matches) setMenuOpen(false)
     }
     document.addEventListener('keydown', onKeyDown)
     window.addEventListener('resize', onResize)
