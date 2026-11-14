@@ -322,9 +322,6 @@ export default function HomePage() {
                 decoding="async"
                 onError={ImageCaptionFallback}
               />
-              <figcaption className="hero__caption">
-                <p>Every meal deserves a destination.</p>
-              </figcaption>
             </figure>
           </div>
         </section>

@@ -71,18 +71,21 @@
   justify-content: space-between;
   gap: 10px;
   flex-shrink: 0;
-  /* Fixed height in both rail states: otherwise the header grows when the logo
-     stacks above the toggle and every nav icon shifts down. */
+  /* Fixed height in both rail states: otherwise the header grows when the
+     logo stacks above the toggle and every nav icon shifts down. */
   min-height: 72px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
+  /* The brand shrinks away instead of spilling over the toggle. Nothing in the
+     header uses an overflowing tooltip, so clipping is safe here. */
+  overflow: hidden;
 }
 
+/* The toggle glides across while the rail narrows; the right inset lands its
+   centre on x = 38, matching every nav icon and the sign-out icon. */
 .app-sidebar--collapsed .app-sidebar__top {
-  flex-direction: row;
-  justify-content: center;
   gap: 0;
-  padding: 12px 0;
+  padding: 12px 21px 12px 16px;
 }
 
 .app-sidebar__brand {
@@ -90,12 +93,16 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
+  transition: max-width 220ms ease, opacity 160ms ease;
 }
 
-/* No logo on the rail: the toggle is the only thing in the header, exactly like
-   a collapsed menu button. */
+/* No logo on the rail: collapsed to zero width rather than `display: none`, so
+   the header keeps pushing the toggle to the right while it animates. */
 .app-sidebar--collapsed .app-sidebar__brand {
-  display: none;
+  max-width: 0;
+  opacity: 0;
 }
 
 .app-sidebar__brand-text {
@@ -103,10 +110,6 @@
   flex-direction: column;
   min-width: 0;
   line-height: 1.15;
-}
-
-.app-sidebar--collapsed .app-sidebar__brand-text {
-  display: none;
 }
 
 .app-sidebar__brand-name {
@@ -218,32 +221,10 @@
   text-overflow: ellipsis;
 }
 
-/* Collapsed rail: icons only, centred, with hover/focus tooltips. */
-
-.app-sidebar--collapsed .app-sidebar__nav {
-  align-items: center;
-  padding: 12px 0;
-}
-
-.app-sidebar--collapsed .app-sidebar__link {
-  justify-content: center;
-  width: 48px;
-  padding: 9px 0;
-  gap: 0;
-}
-
-.app-sidebar--collapsed .app-sidebar__link-label,
-.app-sidebar--collapsed .app-sidebar__logout-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
+/* Collapsed rail: no layout switch at all. The padding that places the icon at
+   x = 38 stays put in both states and the labels ellipsize themselves as the
+   rail narrows, which is what makes the collapse animation and the expansion
+   animation the same motion played in opposite directions. */
 
 .app-sidebar__link::after,
 .app-sidebar__logout::after {
@@ -289,13 +270,21 @@
   gap: 2px;
   min-width: 0;
   margin: 0 0 10px;
+  max-height: 4rem;
+  overflow: hidden;
+  /* Animating the block away keeps the footer (and the sign-out button) from
+     jumping: only the faded height changes, the button itself never moves. */
+  transition: max-height 220ms ease, opacity 140ms ease, margin-bottom 220ms ease;
 }
 
 .app-sidebar__account-email {
   font-size: 0.78rem;
   line-height: 1.35;
   color: var(--charcoal);
-  overflow-wrap: anywhere;
+  /* One clipped line instead of wrapping into 3-4 lines mid-animation. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .app-sidebar__account-role {
@@ -304,6 +293,16 @@
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-sidebar__logout-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-sidebar__logout {
@@ -335,21 +334,13 @@
   color: var(--rust);
 }
 
-.app-sidebar--collapsed .app-sidebar__footer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 14px 0 18px;
-}
-
+/* The footer keeps its padding in both states, so the sign-out button's icon
+   stays on the same x as the nav icons and the button never moves vertically
+   while the account block fades away. */
 .app-sidebar--collapsed .app-sidebar__account {
-  display: none;
-}
-
-.app-sidebar--collapsed .app-sidebar__logout {
-  justify-content: center;
-  width: 48px;
-  padding: 9px 0;
+  max-height: 0;
+  margin-bottom: 0;
+  opacity: 0;
 }
 
 /* Main content offset ----------------------------------------------------- */
@@ -893,60 +884,23 @@
     transform: translateX(0);
   }
 
+  /* The drawer is always the full 260px expanded layout, so the rail's
+     collapsed styling is neutralised rather than rebuilt. */
   .app-sidebar--collapsed .app-sidebar__top {
-    flex-direction: row;
     justify-content: space-between;
     gap: 10px;
-    padding: 18px 16px 16px;
+    padding: 12px 16px;
   }
 
   .app-sidebar--collapsed .app-sidebar__brand {
-    display: inline-flex;
-    justify-content: flex-start;
-  }
-
-  .app-sidebar--collapsed .app-sidebar__brand-text {
-    display: flex;
-  }
-
-  .app-sidebar--collapsed .app-sidebar__nav {
-    align-items: stretch;
-    padding: 12px 10px;
-  }
-
-  .app-sidebar--collapsed .app-sidebar__link {
-    justify-content: flex-start;
-    gap: 12px;
-    width: auto;
-    padding: 9px 12px;
-  }
-
-  .app-sidebar--collapsed .app-sidebar__link-label,
-  .app-sidebar--collapsed .app-sidebar__logout-label {
-    position: static;
-    width: auto;
-    height: auto;
-    margin: 0;
-    padding: 0;
-    overflow: visible;
-    clip-path: none;
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .app-sidebar--collapsed .app-sidebar__footer {
-    display: block;
-    padding: 14px 16px 18px;
+    max-width: none;
+    opacity: 1;
   }
 
   .app-sidebar--collapsed .app-sidebar__account {
-    display: flex;
-  }
-
-  .app-sidebar--collapsed .app-sidebar__logout {
-    justify-content: flex-start;
-    width: 100%;
-    padding: 8px 10px;
+    max-height: none;
+    margin: 0 0 10px;
+    opacity: 1;
   }
 
   .app-sidebar__collapse {
@@ -1003,6 +957,8 @@
   .app-sidebar__logout::after,
   .app-sidebar__collapse,
   .app-sidebar__close,
+  .app-sidebar__brand,
+  .app-sidebar__account,
   .app-sidebar,
   .app-scrim,
   .app-main {

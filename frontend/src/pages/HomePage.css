@@ -455,22 +455,6 @@
   background: var(--warm-beige);
 }
 
-.landing .hero__caption {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  max-width: min(78%, 380px);
-  background: var(--olive-dark);
-  color: var(--light-beige);
-  padding: 22px 28px 24px;
-}
-
-.landing .hero__caption p {
-  font-family: var(--font-display);
-  font-size: clamp(1.3rem, 2vw, 1.75rem);
-  line-height: 1.2;
-}
-
 @media (min-width: 960px) {
   /* The split is capped instead of tracking the window edge-to-edge. A fully
      fluid hero always occupies half the window, so its physical size barely
