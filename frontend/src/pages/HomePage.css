@@ -442,11 +442,17 @@
 .landing .hero__media {
   position: relative;
   min-height: 0;
-  aspect-ratio: 4 / 3;
+  /* The hero asset is square, so the panel is too: `cover`/`contain` then show
+     the whole photo instead of trimming its sides. */
+  aspect-ratio: 1 / 1;
+}
+
+.landing .hero__media img {
+  object-fit: contain;
 }
 
 .landing .hero__media.media {
-  background: var(--olive-light);
+  background: var(--warm-beige);
 }
 
 .landing .hero__caption {
@@ -490,12 +496,12 @@
     align-items: center;
   }
 
-  /* Height comes from the copy column and a rem-based floor, never from 100vh,
-     so the image grows and shrinks with the text at every zoom level. The
-     figure stretches to the row, which keeps the panel aligned with the copy. */
+  /* Square panel, centred against the copy. No stretch and no rem floor: both
+     would reshape the box and make `contain` letterbox the photo. */
   .landing .hero__media {
-    aspect-ratio: auto;
-    min-height: 34rem;
+    aspect-ratio: 1 / 1;
+    align-self: center;
+    min-height: 0;
   }
 }
 
