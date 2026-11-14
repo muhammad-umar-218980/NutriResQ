@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
+  AlignLeft,
   LogOut,
   Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
   X,
   type LucideIcon,
 } from 'lucide-react'
@@ -167,9 +166,9 @@ export default function AppShell({ workspace, nav, children }: AppShellProps) {
             onClick={() => setCollapsed((prev) => !prev)}
           >
             {collapsed ? (
-              <PanelLeftOpen size={20} strokeWidth={1.9} aria-hidden="true" />
+              <Menu size={20} strokeWidth={1.9} aria-hidden="true" />
             ) : (
-              <PanelLeftClose size={20} strokeWidth={1.9} aria-hidden="true" />
+              <AlignLeft size={20} strokeWidth={1.9} aria-hidden="true" />
             )}
           </button>
 

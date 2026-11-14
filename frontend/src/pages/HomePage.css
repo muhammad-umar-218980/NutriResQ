@@ -487,6 +487,8 @@
   }
 
   .landing .hero__copy {
+    padding-top: clamp(32px, 3.4vw, 52px);
+    padding-bottom: clamp(40px, 5vw, 72px);
     padding-left: max(
       var(--gutter),
       calc((min(100vw, 96rem) - var(--max)) / 2 + var(--gutter))
@@ -573,7 +575,7 @@
   }
 
   .landing .problem__photo {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 4 / 3;
   }
 
   .landing .problem__list {
