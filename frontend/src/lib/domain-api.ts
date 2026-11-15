@@ -4,13 +4,23 @@ import { apiRequest } from './api'
 import type {
   AcoEvaluationResult,
   AstarEvaluation,
+  CloneScenarioResponse,
   ClosestPairEvaluationResult,
+  ComparisonResponse,
+  DonationMutationResponse,
+  DonationRecord,
   EvaluationResponse,
   KnapsackEvaluationResult,
+  RecipientMutationResponse,
+  RoadMutationResponse,
   RunResponse,
   RunsResponse,
+  ScenarioChangesResponse,
   ScenariosResponse,
+  SensitivityResponse,
   SnapshotResponse,
+  SupplyReduceResponse,
+  VehicleMutationResponse,
 } from '../types/domain'
 
 export interface AlgorithmOverrides {
@@ -97,4 +107,100 @@ export function evaluateAco(input: {
     method: 'POST',
     body: input,
   })
+}
+
+/* Scenario simulator ------------------------------------------------------- */
+
+export function cloneScenario(
+  scenarioId: string,
+  body: { name?: string; description?: string | null } = {},
+): Promise<CloneScenarioResponse> {
+  return apiRequest<CloneScenarioResponse>(
+    `/api/scenarios/${encodeURIComponent(scenarioId)}/clone`,
+    { method: 'POST', body },
+  )
+}
+
+export function updateScenarioRoad(
+  scenarioId: string,
+  roadId: string,
+  isAvailable: boolean,
+): Promise<RoadMutationResponse> {
+  return apiRequest<RoadMutationResponse>(
+    `/api/scenarios/${encodeURIComponent(scenarioId)}/roads/${encodeURIComponent(roadId)}`,
+    { method: 'PATCH', body: { isAvailable } },
+  )
+}
+
+export function updateScenarioVehicle(
+  scenarioId: string,
+  vehicleId: string,
+  patch: { isAvailable?: boolean; capacityUnits?: number; allowLargeStateSpace?: boolean },
+): Promise<VehicleMutationResponse> {
+  return apiRequest<VehicleMutationResponse>(
+    `/api/scenarios/${encodeURIComponent(scenarioId)}/vehicles/${encodeURIComponent(vehicleId)}`,
+    { method: 'PATCH', body: patch },
+  )
+}
+
+export function updateScenarioDonation(
+  scenarioId: string,
+  donationId: string,
+  patch: { weightUnits?: number; valueScore?: number; status?: DonationRecord['status'] },
+): Promise<DonationMutationResponse> {
+  return apiRequest<DonationMutationResponse>(
+    `/api/scenarios/${encodeURIComponent(scenarioId)}/donations/${encodeURIComponent(donationId)}`,
+    { method: 'PATCH', body: patch },
+  )
+}
+
+export function updateScenarioRecipient(
+  scenarioId: string,
+  recipientId: string,
+  patch: { demandUnits?: number; priorityScore?: number; isAvailable?: boolean },
+): Promise<RecipientMutationResponse> {
+  return apiRequest<RecipientMutationResponse>(
+    `/api/scenarios/${encodeURIComponent(scenarioId)}/recipients/${encodeURIComponent(recipientId)}`,
+    { method: 'PATCH', body: patch },
+  )
+}
+
+export function reduceScenarioSupply(
+  scenarioId: string,
+  percent: number,
+): Promise<SupplyReduceResponse> {
+  return apiRequest<SupplyReduceResponse>(
+    `/api/scenarios/${encodeURIComponent(scenarioId)}/supply/reduce`,
+    { method: 'POST', body: { percent } },
+  )
+}
+
+export function createSensitivityVariant(
+  scenarioId: string,
+  removeTopUrgencyCount: number,
+): Promise<SensitivityResponse> {
+  return apiRequest<SensitivityResponse>(
+    `/api/scenarios/${encodeURIComponent(scenarioId)}/sensitivity`,
+    { method: 'POST', body: { removeTopUrgencyCount } },
+  )
+}
+
+export function getScenarioChanges(
+  scenarioId: string,
+  limit = 50,
+): Promise<ScenarioChangesResponse> {
+  return apiRequest<ScenarioChangesResponse>(
+    `/api/scenarios/${encodeURIComponent(scenarioId)}/changes?limit=${limit}`,
+  )
+}
+
+export function compareScenarioRuns(
+  scenarioId: string,
+  baseRunId: string,
+  variantRunId: string,
+): Promise<ComparisonResponse> {
+  const query = new URLSearchParams({ baseRunId, variantRunId })
+  return apiRequest<ComparisonResponse>(
+    `/api/scenarios/${encodeURIComponent(scenarioId)}/compare?${query.toString()}`,
+  )
 }

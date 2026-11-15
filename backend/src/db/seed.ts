@@ -11,6 +11,7 @@ import {
   SEED_ROADS,
   SEED_SCENARIO,
   SEED_VEHICLES,
+  roadCostKm,
   type SeedDemoUser,
 } from './seed-data';
 
@@ -166,7 +167,7 @@ async function seedScenarioData(client: PoolClient): Promise<void> {
         SEED_SCENARIO.id,
         locationId(road.fromIndex),
         locationId(road.toIndex),
-        road.costKm,
+        roadCostKm(road),
         road.isAvailable ?? true,
         road.isBidirectional ?? true,
         road.label ?? null,
@@ -263,12 +264,13 @@ async function seedScenarioData(client: PoolClient): Promise<void> {
     await client.query(
       `INSERT INTO vehicles
          (id, scenario_id, owner_user_id, name, capacity_units, start_location_id, is_available)
-       VALUES ($1, $2, $3, $4, $5, $6, true)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (id) DO UPDATE
          SET owner_user_id = EXCLUDED.owner_user_id,
              name = EXCLUDED.name,
              capacity_units = EXCLUDED.capacity_units,
              start_location_id = EXCLUDED.start_location_id,
+             is_available = EXCLUDED.is_available,
              updated_at = now()`,
       [
         vehicle.id,
@@ -277,6 +279,7 @@ async function seedScenarioData(client: PoolClient): Promise<void> {
         vehicle.name,
         vehicle.capacityUnits,
         locationId(vehicle.startLocationIndex),
+        vehicle.isAvailable ?? true,
       ],
     );
   }

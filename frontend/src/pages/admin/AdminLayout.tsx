@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import {
   ChartNoAxesCombined,
+  FlaskConical,
   Handshake,
   LayoutDashboard,
   Package,
@@ -14,6 +15,7 @@ import type { AppNavItem } from '../../components/app/AppShell'
 const ADMIN_NAV: AppNavItem[] = [
   { label: 'Overview', to: '/admin', end: true, icon: LayoutDashboard },
   { label: 'Workspace', to: '/admin/workspace', icon: PanelsTopLeft },
+  { label: 'Scenarios', to: '/admin/scenarios', icon: FlaskConical },
   { label: 'Algorithms', to: '/admin/algorithms', icon: Workflow },
   {
     label: 'Benchmarks',

@@ -81,12 +81,10 @@ export async function evaluateAstar(input: {
   const graph = buildRoadGraph(snapshot.roads);
   const projected = projectLocations(snapshot.locations);
   const costUnit = snapshot.roads.find((road) => road.costUnit)?.costUnit ?? 'km';
-  const baseHeuristic =
+  const heuristic: (nodeId: string | number) => number =
     input.heuristic === 'zero'
       ? () => 0
       : buildHeuristic(costUnit, projected, input.toLocationId);
-  const heuristic = (nodeId: string | number): number =>
-    baseHeuristic(typeof nodeId === 'string' ? nodeId : String(nodeId));
 
   const astarStartedAt = performance.now();
   const astar = aStarSearch(graph, input.fromLocationId, input.toLocationId, heuristic);

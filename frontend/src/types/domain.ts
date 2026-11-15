@@ -278,6 +278,125 @@ export interface ScenariosResponse {
   scenarios: ScenarioSummary[]
 }
 
+/** One audited simulator edit. Mirrors backend `ScenarioChangeRecord`. */
+export interface ScenarioChangeRecord {
+  id: string
+  scenarioId: string
+  sourceRunId: string | null
+  changeType:
+    | 'clone'
+    | 'road_availability'
+    | 'vehicle_update'
+    | 'donation_update'
+    | 'recipient_update'
+    | 'supply_reduced'
+    | 'urgency_removed'
+  targetEntityType: 'scenario' | 'road' | 'vehicle' | 'donation' | 'recipient'
+  targetEntityId: string | null
+  beforeValue: Record<string, unknown>
+  afterValue: Record<string, unknown>
+  createdAt: string
+}
+
+export interface StateSpaceInfo {
+  vehicleCount: number
+  projectedStateCount: number
+  maxStates: number
+  exceedsLimit: boolean
+}
+
+export interface MetricDelta {
+  metric: string
+  label: string
+  unit: string
+  base: number
+  variant: number
+  delta: number
+  deltaPercent: number | null
+  lowerIsBetter: boolean
+}
+
+export interface RunComparison {
+  scenarioId: string
+  base: RunSummary
+  variant: RunSummary
+  deltas: MetricDelta[]
+  notes: string[]
+}
+
+export interface ScenarioChangesResponse {
+  success: boolean
+  changes: ScenarioChangeRecord[]
+}
+
+export interface ComparisonResponse {
+  success: boolean
+  comparison: RunComparison
+}
+
+/** A donation patch echoes the fields it can change, not the joined snapshot row. */
+export interface PatchedDonation {
+  id: string
+  packageName: string
+  weightUnits: number
+  valueScore: number
+  status: DonationStatus
+}
+
+export interface RoadMutationResponse {
+  success: boolean
+  changed: boolean
+  change: ScenarioChangeRecord | null
+  road?: RoadRecord
+}
+
+export interface VehicleMutationResponse {
+  success: boolean
+  changed: boolean
+  change: ScenarioChangeRecord | null
+  vehicle?: VehicleRecord
+  stateSpace?: StateSpaceInfo
+}
+
+export interface DonationMutationResponse {
+  success: boolean
+  changed: boolean
+  change: ScenarioChangeRecord | null
+  donation?: PatchedDonation
+}
+
+export interface RecipientMutationResponse {
+  success: boolean
+  changed: boolean
+  change: ScenarioChangeRecord | null
+  recipient?: RecipientRecord
+}
+
+export interface CloneScenarioResponse {
+  success: boolean
+  scenario: ScenarioSummary
+}
+
+export interface SensitivityResponse {
+  success: boolean
+  scenario: ScenarioSummary
+  disabledRecipients: RecipientRecord[]
+  changes: ScenarioChangeRecord[]
+  note: string
+}
+
+export interface SupplyReduceResponse {
+  success: boolean
+  summary: {
+    percent: number
+    donationCount: number
+    affectedCount: number
+    totalWeightBefore: number
+    totalWeightAfter: number
+  }
+  change: ScenarioChangeRecord
+}
+
 export interface ScenarioResponse {
   success: boolean
   scenario: ScenarioSummary

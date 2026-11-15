@@ -239,6 +239,54 @@ export interface BenchmarkRecord {
   trialNumber: number;
 }
 
+/** One audited simulator edit. The normalized source rows stay authoritative. */
+export interface ScenarioChangeRecord {
+  id: string;
+  scenarioId: string;
+  sourceRunId: string | null;
+  changeType:
+    | 'clone'
+    | 'road_availability'
+    | 'vehicle_update'
+    | 'donation_update'
+    | 'recipient_update'
+    | 'supply_reduced'
+    | 'urgency_removed';
+  targetEntityType: 'scenario' | 'road' | 'vehicle' | 'donation' | 'recipient';
+  targetEntityId: string | null;
+  beforeValue: Record<string, unknown>;
+  afterValue: Record<string, unknown>;
+  createdAt: string;
+}
+
+/** Exact-DP state space implied by the fleet that is currently available. */
+export interface StateSpaceInfo {
+  vehicleCount: number;
+  projectedStateCount: number;
+  maxStates: number;
+  exceedsLimit: boolean;
+}
+
+/** One metric delta between a base run and a variant run. */
+export interface MetricDelta {
+  metric: string;
+  label: string;
+  unit: string;
+  base: number;
+  variant: number;
+  delta: number;
+  deltaPercent: number | null;
+  lowerIsBetter: boolean;
+}
+
+export interface RunComparison {
+  scenarioId: string;
+  base: RunSummary;
+  variant: RunSummary;
+  deltas: MetricDelta[];
+  notes: string[];
+}
+
 export type RunStatus = 'running' | 'succeeded' | 'partial' | 'failed';
 
 /** List-view run row; `result` is only included by the detail endpoint. */

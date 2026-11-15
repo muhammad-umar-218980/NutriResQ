@@ -218,12 +218,10 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
   const heuristicFor = (goalId: string): ((nodeId: string | number) => number) => {
     const cached = heuristics.get(goalId);
     if (cached) return cached;
-    const base =
+    const heuristic: (nodeId: string | number) => number =
       config.astarHeuristic === 'zero'
         ? () => 0
         : buildHeuristic(roadUnit, projected, goalId);
-    const heuristic = (nodeId: string | number): number =>
-      base(typeof nodeId === 'string' ? nodeId : String(nodeId));
     heuristics.set(goalId, heuristic);
     return heuristic;
   };
@@ -291,6 +289,12 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
   const unallocated: UnallocatedPackage[] = [];
   let ruleEligibleCount = 0;
 
+  // Recipient availability is a documented eligibility rule: a package whose
+  // intended recipient is unavailable cannot be delivered, so it is reported
+  // instead of being allocated to a closed organisation. The seed keeps every
+  // recipient available, so this only fires when the simulator disables one.
+  const recipientById = new Map(snapshot.recipients.map((recipient) => [recipient.id, recipient]));
+
   for (const donation of snapshot.donations) {
     const fail = (reason: UnallocatedPackage['reason'], detail: string): void => {
       unallocated.push({
@@ -305,6 +309,17 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
 
     if (!donation.isEligible) {
       fail('ineligible', 'Marked ineligible in the source data.');
+      continue;
+    }
+
+    const intendedRecipient = donation.recipientId
+      ? recipientById.get(donation.recipientId) ?? null
+      : null;
+    if (intendedRecipient && !intendedRecipient.isAvailable) {
+      fail(
+        'not_available',
+        `The intended recipient "${intendedRecipient.name}" is marked unavailable in this scenario.`,
+      );
       continue;
     }
     if (donation.status === 'reserved' || donation.status === 'unavailable') {
