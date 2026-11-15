@@ -24,8 +24,9 @@ and on the free Neon plan.
 | Heuristic admissibility | `seed-data.test.ts`, `astar.test.ts` | every road cost ≥ straight-line distance; `h(n) ≤ d(n, goal)` for all pairs |
 | Closest pair versus brute force | `closest-pair.test.ts`, `optimization.test.ts` | 200 random sets agree to 1e-9; benchmark `distancesAgree` |
 | DP versus **exhaustive enumeration** | `knapsack.test.ts` | 50 random small instances match an independent exhaustive solver |
+| Lab cross-check (`verifyOptimalitySmall`) | `knapsack.test.ts` | production verifier agrees with the independent solver on 25 instances; trims 40 items to a 65,536-assignment prefix; declines with a reason when impossible |
 | Greedy baseline never beats DP | `knapsack.test.ts`, `optimization.test.ts` | greedy total value ≤ DP total value |
-| ACO trials: best / average / worst available | `aco.test.ts` | trip count, seed determinism, coverage, exhaustive-optimality gap logged |
+| ACO trials: best / average / worst available | `aco.test.ts` | per-trial best ≤ average ≤ worst; complete-tour counts; summary matches the trial series; deterministic for a fixed seed |
 | ACO versus nearest neighbour | `aco.test.ts` | same job coverage, finite measured costs, comparison logged |
 | Pickup before delivery on every route | `aco.test.ts`, `optimization.test.ts` | legs are emitted in pickup→delivery pairs; delivery stops follow their pickup |
 | Disconnected / unreachable reported by name | `seed-data.test.ts`, `optimization.test.ts` | Isolation Point unreachable; 54 ordered unreachable pairs named |
@@ -62,6 +63,15 @@ Leaflet, docs) can rely on it:
 - one unreachable node (`Isolation Point`), everything else connected to `Central Depot`
 - designed edge cases: expired, ineligible, oversized, no-recipient, `unavailable`,
   and future-dated donations
+
+## Scale benchmark (not part of `npm test`)
+
+`npm run bench:scale` prints CSV to stdout and touches neither the database nor the
+server. It measures A* vs Dijkstra on grid graphs (runtime + node expansions + a
+cost-equality flag), divide-and-conquer vs brute-force closest pair on 100–4,000
+points (with an equality flag), DP runtime on the seeded 143,106-state fleet, and
+ACO runtime on synthetic planes. Use it for the performance section; it asserts
+nothing, so keep the agreement flags in the output when quoting numbers.
 
 ## Adding a test
 

@@ -1,5 +1,7 @@
 /** Shared domain types used by the algorithm modules, orchestrator and API. */
 
+import type { ACOTourSummary, ACOTrialStat } from '../algorithms/aco';
+
 export type LocationType = 'donor' | 'recipient' | 'hub' | 'other';
 
 export interface LocationRecord {
@@ -177,6 +179,18 @@ export interface UnreachablePair {
   reason: string;
 }
 
+/**
+ * ACO diagnostics for one vehicle. Stored with the run result so the benchmark
+ * page can show best/average/worst tour costs without recomputing anything.
+ */
+export interface ACOTourStatRow {
+  vehicleId: string;
+  vehicleName: string;
+  jobCount: number;
+  trialStats: ACOTrialStat[];
+  tourSummary: ACOTourSummary;
+}
+
 export interface ClosestPairResult {
   distanceMeters: number | null;
   p1: { id: string; name: string } | null;
@@ -213,6 +227,8 @@ export interface OptimizationResult {
   allocations: Allocation[];
   unallocated: UnallocatedPackage[];
   routes: VehicleRoute[];
+  /** Per-vehicle ACO search diagnostics: trial costs, best/average/worst. */
+  acoTours: ACOTourStatRow[];
   unreachable: UnreachablePair[];
   closestPair: ClosestPairResult | null;
   warnings: Warning[];

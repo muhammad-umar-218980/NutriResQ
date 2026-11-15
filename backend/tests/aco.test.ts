@@ -94,6 +94,63 @@ describe('ant colony route ordering', () => {
     expect(createDefaultACOConfig(9).numAnts).toBe(3);
     expect(createDefaultACOConfig(16).numAnts).toBe(4);
   });
+
+  it('reports best, average and worst tour cost per trial', () => {
+    const config = createDefaultACOConfig(JOBS.length, { seed: 99, numTrials: 4 });
+    const result = optimizeRouteWithACO('D', JOBS, syntheticCost, config);
+
+    expect(result.trialStats).toHaveLength(4);
+    expect(result.trialStats.map((entry) => entry.trial)).toEqual([1, 2, 3, 4]);
+
+    for (const stat of result.trialStats) {
+      expect(stat.ants).toBe(config.numAnts);
+      expect(stat.completeTours).toBe(config.numAnts);
+      expect(stat.completeTours).toBeLessThanOrEqual(stat.ants);
+      expect(stat.bestCost).not.toBeNull();
+      expect(stat.worstCost).not.toBeNull();
+      expect(stat.averageCost).not.toBeNull();
+      // Cheap, but catches a swapped min/max.
+      expect(stat.bestCost!).toBeLessThanOrEqual(stat.averageCost! + 1e-9);
+      expect(stat.averageCost!).toBeLessThanOrEqual(stat.worstCost! + 1e-9);
+    }
+
+    const summary = result.tourSummary;
+    const totals = result.trialStats.length * config.numAnts;
+    expect(summary.totalTours).toBe(totals);
+    expect(summary.completeTours).toBe(totals);
+    expect(summary.bestTourCost!).toBeLessThanOrEqual(summary.averageTourCost! + 1e-9);
+    expect(summary.averageTourCost!).toBeLessThanOrEqual(summary.worstTourCost! + 1e-9);
+    // The reported tour is the best complete tour found.
+    expect(summary.bestTourCost!).toBeLessThanOrEqual(result.totalCost + 1e-9);
+    expect(result.totalAnts).toBe(totals);
+  });
+
+  it('keeps the trial statistics deterministic for a fixed seed', () => {
+    const config = createDefaultACOConfig(JOBS.length, { seed: 4242, numTrials: 3 });
+    const first = optimizeRouteWithACO('D', JOBS, syntheticCost, config);
+    const second = optimizeRouteWithACO('D', JOBS, syntheticCost, config);
+
+    expect(first.trialStats).toEqual(second.trialStats);
+    expect(first.tourSummary).toEqual(second.tourSummary);
+  });
+
+  it('returns empty statistics when no job is feasible', () => {
+    const jobs: RouteJob[] = [
+      { id: 'lost', pickupLocationId: 'X', deliveryLocationId: 'Y' },
+    ];
+    const result = optimizeRouteWithACO(
+      'D',
+      jobs,
+      syntheticCost,
+      createDefaultACOConfig(1, { seed: 1, numTrials: 2 }),
+    );
+
+    expect(result.trialStats).toEqual([]);
+    expect(result.tourSummary.bestTourCost).toBeNull();
+    expect(result.tourSummary.averageTourCost).toBeNull();
+    expect(result.tourSummary.worstTourCost).toBeNull();
+    expect(result.tourSummary.totalTours).toBe(0);
+  });
 });
 
 describe('ACO versus nearest neighbour on real seed routes', () => {

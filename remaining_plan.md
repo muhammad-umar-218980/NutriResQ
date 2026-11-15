@@ -19,8 +19,9 @@ The application is **functionally complete against the CCP proposal** with the *
 | Admin + 3 role portals | 100% |
 | Landing page + shell polish | 100% |
 | Seed dataset (28 locations / 62 roads) | 100% |
-| Tests (§6) | 100% (80 passing) |
+| Tests (§6) | 100% (87 passing) |
 | Scenario simulator | 100% (clone, 6 edit types, audit, compare, sensitivity) |
+| Evaluation evidence (ACO spread, DP vs exhaustive, scale CSV) | 100% |
 | Docs / deployment / DB finalisation | 0% |
 | Map (Leaflet) + charts (Recharts) | 0% (SVG schematic in place) |
 
@@ -95,7 +96,7 @@ Correctness properties already implemented:
 | `POST /api/scenarios/:id/clone`; `PATCH /:id/{roads,vehicles,donations,recipients}/:childId`; `POST /:id/supply/reduce`, `/:id/sensitivity`; `GET /:id/changes`, `/:id/compare` | admin | scenario simulator (Phase 2) — every accepted edit writes `scenario_changes` |
 | `POST /api/optimize` | admin | run pipeline + persist |
 | `GET /api/runs/:id` | admin | stored run |
-| `POST /api/algorithms/{astar,knapsack,closest-pair,aco}` | admin | per-algorithm lab with baselines |
+| `POST /api/algorithms/{astar,knapsack,closest-pair,aco}` | admin | per-algorithm lab with baselines; knapsack also returns a DP-vs-exhaustive prefix check (`verifyOptimality: false` skips it) |
 | `GET /api/portal/scenarios`, `/:id/locations` | auth | picker data |
 | donor: `GET /api/portal/donor`, `POST/PUT/DELETE donations` | donor | donations write into the **scenario** table → feed the optimizer |
 | recipient: `GET /api/portal/recipient`, `PATCH` | recipient | demand + priority profile |
@@ -141,8 +142,8 @@ Correctness properties already implemented:
 | evaluation incl. exhaustive small-case cross-check | `[x]` DP == exhaustive in `knapsack.test.ts` |
 
 ### 2.9 Proposal §6 testing — `[x]` DONE
-`backend/tests/` contains 8 files / 80 tests, all green in ~5 s with **no database**:
-`seed-data`, `astar`, `knapsack` (incl. exhaustive cross-check), `closest-pair`, `aco`, `optimization` (end-to-end pipeline), `scenario` (state-space, deltas, urgency, recipient rule), `api` (401/403/422/404/CORS). Coverage map lives in `backend/tests/README.md`. `npx tsc --noEmit`, frontend `lint` and `build` are clean.
+`backend/tests/` contains 8 files / 87 tests, all green in ~5 s with **no database**:
+`seed-data`, `astar`, `knapsack` (incl. exhaustive cross-check + the lab verifier), `closest-pair`, `aco` (incl. per-trial cost spread), `optimization` (end-to-end pipeline), `scenario` (state-space, deltas, urgency, recipient rule), `api` (401/403/422/404/CORS). Coverage map lives in `backend/tests/README.md`. `npx tsc --noEmit`, frontend `lint` and `build` are clean. `npm run bench:scale` prints the performance CSV without a database.
 
 ---
 
@@ -210,10 +211,13 @@ Acceptance checks met: base run untouched; closing a road / disabling a van / re
 
 ---
 
-### Phase 3 — Evaluation gaps · ~2–3 h · `[ ]`
-- Return + store **ACO best / average / worst** per trial (`aco.ts` already collects `tours[]`); surface on Benchmarks.
-- `verifyOptimalitySmall()` for the Algorithms lab: "DP == exhaustive for this instance".
-- Optional `npm run bench:scale` printing CSV for N = 10/20/50/100 locations (performance section evidence).
+### Phase 3 — Evaluation gaps · `[x]` DONE (2026-11-15)
+- **ACO best / average / worst per trial.** `aco.ts` now returns `trialStats[]` (one row per trial: ants, complete tours, best/average/worst cost) and a `tourSummary` over all trials. Only tours that visit every feasible job are scored, so a stuck ant cannot flatter the average. The pipeline stores the per-vehicle spread as `OptimizationResult.acoTours` (inside `result_json`, so it replays from storage) and adds `acoBestTourCost` / `acoAverageTourCost` / `acoWorstTourCost` to the ACO benchmark record plus a Best/Average/Worst column per vehicle. Visible on the Benchmarks page and in the Algorithms lab's ACO tab.
+- **DP vs exhaustive in the lab.** New pure module `algorithms/lib/optimality.ts` (`exhaustiveBestValue`, `verifyOptimalitySmall`). `evaluateKnapsack` compares the DP with brute-force enumeration on the largest deterministic prefix that fits 200,000 assignments (the seed compares **8 of 19** packages, 65,536 assignments, and reports a match at objective 32,950). `POST /api/algorithms/knapsack` accepts `verifyOptimality: false` to skip it. The response states explicitly that a prefix is evidence, not a proof for the whole scenario.
+- **Scale benchmark.** `npm run bench:scale` (no DB, no server) prints CSV: A* vs Dijkstra on 10×10…40×40 grids (with node-expansion counts and a cost-agreement flag), D&C vs brute-force closest pair for 100…4,000 points (agreement flag), DP runtime for 10…30 packages on the seeded 143,106-state fleet, and ACO runtime for 4…10 jobs.
+- Tests: +7 (ACO spread determinism/ordering/empty case; verifier agreement with the independent test solver, prefix trimming, determinism, and all three "declined" reasons) → **87 passing**.
+- Verified live: `optimalityCheck` attempted/matched, ACO spread best ≤ average ≤ worst per vehicle, benchmark fields present, and `GET /api/runs/:id` replays `acoTours` from storage.
+- Deviation: the lab check uses a **prefix** of the real instance rather than a random subset, so the same scenario always gives the same verdict; the note in the UI and API says so.
 
 ---
 
@@ -256,7 +260,7 @@ Acceptance: every route leg visible, closed road visibly unavailable, no layout 
 
 - [x] `npm test` green with all six §6 categories covered
 - [x] Scenario simulator live: 5 change types + sensitivity + preserved original + comparison view
-- [~] ACO best/avg/worst visible in the UI (data collected + optimality/exhaustive checks exist; UI surfacing is Phase 3)
+- [x] ACO best/avg/worst visible in the UI (stored per vehicle, surfaced on Benchmarks + Algorithms lab; exhaustive/prefix checks exist)
 - [ ] Leaflet map (or documented decision + schematic) with all routes and closed roads
 - [ ] README + `docs/` restored and accurate; PDF regenerated
 - [ ] Deployed: Vercel frontend + Node backend + Neon (schema + admin + 1 scenario, no demo rows)

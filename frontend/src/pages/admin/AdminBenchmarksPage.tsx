@@ -175,9 +175,11 @@ export default function AdminBenchmarksPage() {
                 not road distance, and equal distances only mean the two implementations agree.
               </li>
               <li>
-                <strong>ACO vs nearest neighbour</strong> — ACO is a seeded heuristic. A lower cost
+                <strong>ACO vs nearest neighbour</strong> - ACO is a seeded heuristic. A lower cost
                 than the baseline is an observation for that seed and trial count, not a
-                guarantee of optimality.
+                guarantee of optimality. Best / average / worst tour cost come from the ants
+                themselves: average and worst ignore incomplete tours, so a stuck ant cannot
+                make the search look better than it was.
               </li>
             </ul>
           </Card>

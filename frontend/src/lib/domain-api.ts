@@ -83,6 +83,7 @@ export function evaluateAstar(input: {
 export function evaluateKnapsack(input: {
   scenarioId: string
   maxStates?: number
+  verifyOptimality?: boolean
 }): Promise<EvaluationResponse<KnapsackEvaluationResult>> {
   return apiRequest<EvaluationResponse<KnapsackEvaluationResult>>(
     '/api/algorithms/knapsack',

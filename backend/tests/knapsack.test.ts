@@ -7,6 +7,10 @@ import {
 } from '../src/algorithms/greedy-knapsack';
 import { createRng } from '../src/algorithms/lib/rng';
 import {
+  exhaustiveBestValue as productionExhaustiveBestValue,
+  verifyOptimalitySmall,
+} from '../src/algorithms/lib/optimality';
+import {
   solveMultipleKnapsack,
   type MultipleKnapsackItem,
 } from '../src/algorithms/multiple-knapsack-dp';
@@ -209,5 +213,96 @@ describe('multiple-knapsack DP', () => {
     expect(() =>
       solveMultipleKnapsack([], [60, 45, 50], { maxStates: 10_000 }),
     ).toThrow(/maxStates/);
+  });
+});
+
+describe('exhaustive cross-check used by the Algorithms lab', () => {
+  /**
+   * Production verifier, including its own exhaustive enumeration. The suite
+   * compares it with the independent solver above so a shared bug cannot hide.
+   */
+  it('agrees with the independent exhaustive solver on random instances', () => {
+    const rng = createRng(31337);
+
+    for (let instance = 0; instance < 25; instance++) {
+      const capacities = Array.from(
+        { length: 1 + Math.floor(rng() * 3) },
+        () => 4 + Math.floor(rng() * 9),
+      );
+      const items: MultipleKnapsackItem[] = Array.from(
+        { length: 1 + Math.floor(rng() * 7) },
+        (_, index) => ({
+          id: `pkg-${index}`,
+          weightUnits: 1 + Math.floor(rng() * 7),
+          value: 1 + Math.floor(rng() * 20),
+        }),
+      );
+
+      const check = verifyOptimalitySmall(items, capacities);
+      expect(check.attempted, `instance ${instance} was skipped`).toBe(true);
+      expect(check.match, `instance ${instance} disagreed with exhaustive`).toBe(true);
+      expect(check.dpValue).toBeCloseTo(exhaustiveBestValue(items, capacities), 9);
+      expect(check.exhaustiveValue).toBeCloseTo(
+        productionExhaustiveBestValue(items, capacities),
+        9,
+      );
+      // Nothing was trimmed: the whole instance fits inside the limit.
+      expect(check.reduced).toBe(false);
+      expect(check.itemCount).toBe(items.length);
+    }
+  });
+
+  it('trims to the largest prefix that fits the enumeration limit', () => {
+    const items: MultipleKnapsackItem[] = Array.from({ length: 40 }, (_, index) => ({
+      id: `pkg-${index}`,
+      weightUnits: 1 + (index % 7),
+      value: 1 + (index % 13),
+    }));
+
+    const check = verifyOptimalitySmall(items, [15, 15, 15], {
+      maxEnumerations: 200_000,
+    });
+
+    // (3 vehicles + 1) ^ 8 = 65,536; ^ 9 = 262,144 > 200,000.
+    expect(check.attempted).toBe(true);
+    expect(check.itemCount).toBe(8);
+    expect(check.requestedItemCount).toBe(40);
+    expect(check.reduced).toBe(true);
+    expect(check.enumerationCount).toBe(65_536);
+    expect(check.enumerationCount).toBeLessThanOrEqual(check.enumerationLimit);
+    expect(check.match).toBe(true);
+  });
+
+  it('is deterministic for the same instance', () => {
+    const items: MultipleKnapsackItem[] = Array.from({ length: 12 }, (_, index) => ({
+      id: `pkg-${index}`,
+      weightUnits: 1 + (index % 5),
+      value: index + 1,
+    }));
+
+    const first = verifyOptimalitySmall(items, [10, 12], { maxEnumerations: 50_000 });
+    const second = verifyOptimalitySmall(items, [10, 12], { maxEnumerations: 50_000 });
+
+    expect(first.itemCount).toBe(second.itemCount);
+    expect(first.dpValue).toBe(second.dpValue);
+    expect(first.exhaustiveValue).toBe(second.exhaustiveValue);
+    expect(first.enumerationCount).toBe(second.enumerationCount);
+  });
+
+  it('declines rather than guessing when the instance cannot be checked', () => {
+    const noVehicles = verifyOptimalitySmall([{ weightUnits: 5, value: 10 }], []);
+    expect(noVehicles.attempted).toBe(false);
+    expect(noVehicles.match).toBeNull();
+    expect(noVehicles.reason).toMatch(/vehicle/i);
+
+    const noItems = verifyOptimalitySmall([], [10, 20]);
+    expect(noItems.attempted).toBe(false);
+    expect(noItems.reason).toMatch(/package/i);
+
+    const tooLarge = verifyOptimalitySmall([{ weightUnits: 1, value: 1 }], [10], {
+      maxEnumerations: 1,
+    });
+    expect(tooLarge.attempted).toBe(false);
+    expect(tooLarge.reason).toMatch(/limit/i);
   });
 });

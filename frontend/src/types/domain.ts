@@ -196,14 +196,54 @@ export interface ClosestPairResult {
   note: string
 }
 
+/** Cost spread of the ants inside one ACO trial (complete tours only). */
+export interface ACOTrialStat {
+  trial: number
+  ants: number
+  completeTours: number
+  bestCost: number | null
+  averageCost: number | null
+  worstCost: number | null
+}
+
+export interface ACOTourSummary {
+  bestTourCost: number | null
+  averageTourCost: number | null
+  worstTourCost: number | null
+  completeTours: number
+  totalTours: number
+}
+
+export interface ACOTourStatRow {
+  vehicleId: string
+  vehicleName: string
+  jobCount: number
+  trialStats: ACOTrialStat[]
+  tourSummary: ACOTourSummary
+}
+
+/** Result of the DP-vs-exhaustive cross-check in the Algorithms lab. */
+export interface OptimalityCheck {
+  attempted: boolean
+  reason: string | null
+  itemCount: number
+  requestedItemCount: number
+  vehicleCount: number
+  enumerationCount: number
+  enumerationLimit: number
+  dpValue: number | null
+  exhaustiveValue: number | null
+  match: boolean | null
+  reduced: boolean
+  dp: unknown
+}
+
 export interface Warning {
   code: string
   message: string
   entityType?: string
   entityId?: string
-}
-
-export interface Metrics {
+}export interface Metrics {
   allocatedPackageValue: number
   allocatedPackageWeightUnits: number
   unallocatedPackageCount: number
@@ -223,6 +263,8 @@ export interface OptimizationResult {
   allocations: Allocation[]
   unallocated: UnallocatedPackage[]
   routes: VehicleRoute[]
+  /** Per-vehicle ACO trial-cost distribution, stored with the run. */
+  acoTours: ACOTourStatRow[]
   unreachable: UnreachablePair[]
   closestPair: ClosestPairResult | null
   warnings: Warning[]
@@ -459,12 +501,14 @@ export interface KnapsackEvaluationResult {
   unallocated: UnallocatedPackage[]
   metrics: Metrics
   inputCounts: OptimizationResult['inputCounts']
+  optimalityCheck: OptimalityCheck
 }
 
 export interface AcoEvaluationResult {
   routes: VehicleRoute[]
   unreachable: UnreachablePair[]
   metrics: Metrics
+  tourStats: ACOTourStatRow[]
 }
 
 export interface ClosestPairEvaluationResult {
