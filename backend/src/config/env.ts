@@ -29,6 +29,16 @@ const envSchema = z.object({
     .string()
     .regex(/^[a-z_][a-z0-9_]*$/, 'TEST_SCHEMA must be a lowercase SQL identifier')
     .default('nutriresq_test'),
+
+  /** === SMTP / Email delivery configuration === */
+  SMTP_HOST: z.string().default(''),
+  SMTP_PORT: z.coerce.number().int().positive().default(0),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  SMTP_FROM: z.string().email().default('no-reply@nutriresq.local'),
+
+  /** === Email delivery feature flags === */
+  ENABLE_EMAIL: z.boolean().default(false),
 });
 
 export type Env = z.infer<typeof envSchema>;

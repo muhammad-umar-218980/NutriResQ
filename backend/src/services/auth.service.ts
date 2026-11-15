@@ -1,5 +1,36 @@
 import { env, isProduction } from '../config/env';
+import nodemailer from 'nodemailer';
 import { ConflictError, ForbiddenError, UnauthorizedError } from '../errors/app-error';
+
+const transporter = nodemailer.createTransport({
+  host: env.SMTP_HOST,
+  port: env.SMTP_PORT,
+  auth: {
+    user: env.SMTP_USER,
+    pass: env.SMTP_PASS,
+  },
+});
+
+/** Sends an email if ENABLE_EMAIL is true and SMTP is configured,
+ * otherwise logs the email content in development for testing. */
+async function sendEmail(subject: string, html: string, to: string): Promise<void> {
+  const text = html.replace(/<[^>]+>/g, ' ').trim();
+  if (env.ENABLE_EMAIL && env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS) {
+    const info = await transporter.sendMail({
+      from: env.SMTP_FROM,
+      to,
+      subject,
+      text,
+      html,
+    });
+    console.log(`[auth] Email sent: ${info.messageId}`);
+  } else if (!isProduction) {
+    console.log(`[auth] Email to ${to}:`);
+    console.log(`  Subject: ${subject}`);
+    console.log(`  Text: ${text}`);
+    console.log(`  HTML: ${html}`);
+  }
+}
 import { createOpaqueToken, hashToken } from '../lib/opaque-token';
 import { hashPassword, verifyPassword } from '../lib/password';
 import { issueToken, consumeToken } from '../repositories/token.repository';
@@ -126,8 +157,7 @@ export async function registerUser(
     return created;
   });
 
-  // Email delivery is not configured yet. The token is stored hashed either
-  // way; outside production it is also returned so the flow stays testable.
+  // Email delivery: if configured, send via SMTP; in dev, show the link.
   const verificationToken = createOpaqueToken();
   await issueToken(
     'email_verifications',
@@ -141,6 +171,12 @@ export async function registerUser(
   const base = `${env.FRONTEND_URL}/verify-email?token=${encodeURIComponent(verificationToken)}`;
   if (!isProduction) {
     console.log(`[auth] verification link for ${user.email}: ${base}`);
+  } else {
+    await sendEmail(
+      'Please verify your email address',
+      `<p>Click <a href="${base}">here</a> to verify your email address.</p><p>If you did not sign up for NutriResQ, please ignore this email.</p>`,
+      user.email,
+    );
   }
 
   return {
@@ -244,6 +280,12 @@ export async function requestPasswordReset(
   const url = `${env.FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}`;
   if (!isProduction) {
     console.log(`[auth] password reset link for ${user.email}: ${url}`);
+  } else {
+    await sendEmail(
+      'Reset your password',
+      `<p>Click <a href="${url}">here</a> to reset your password.</p><p>If you did not request a password reset, please ignore this email.</p>`,
+      user.email,
+    );
   }
 
   return isProduction ? {} : { devToken: token, devUrl: url };
@@ -286,7 +328,15 @@ export async function resendVerification(userId: string): Promise<{ devToken?: s
   );
 
   const url = `${env.FRONTEND_URL}/verify-email?token=${encodeURIComponent(token)}`;
-  if (!isProduction) console.log(`[auth] verification link for ${user.email}: ${url}`);
+  if (!isProduction) {
+    console.log(`[auth] verification link for ${user.email}: ${url}`);
+  } else {
+    await sendEmail(
+      'Please verify your email address',
+      `<p>Click <a href="${url}">here</a> to verify your email address.</p><p>If you did not sign up for NutriResQ, please ignore this email.</p>`,
+      user.email,
+    );
+  }
 
   return isProduction ? {} : { devToken: token, devUrl: url };
 }
