@@ -38,7 +38,12 @@ const envSchema = z.object({
   SMTP_FROM: z.string().email().default('no-reply@nutriresq.local'),
 
   /** === Email delivery feature flags === */
-  ENABLE_EMAIL: z.boolean().default(false),
+  ENABLE_EMAIL: z.string()
+    .default('false')
+    .refine((val) => val === 'true' || val === 'false', {
+      message: 'ENABLE_EMAIL must be "true" or "false"',
+    })
+    .transform((val) => val === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;
