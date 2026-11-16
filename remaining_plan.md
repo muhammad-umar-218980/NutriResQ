@@ -221,38 +221,43 @@ Acceptance checks met: base run untouched; closing a road / disabling a van / re
 
 ---
 
-### Phase 4 — Leaflet map · ~3–4 h · `[ ]` (recommended)
+### Phase 4 — Leaflet map · ~3–4 h · `[x]` DONE
 - `npm i leaflet` + `@types/leaflet`; `components/app/RouteMap.tsx` (`useEffect`, OSM tiles, markers by location type, coloured polylines per vehicle, closed roads dashed/grey, popups with cost/stops).
 - Toggle Map / Schematic on `AdminWorkspacePage`; graceful fallback to the schematic if tiles fail (offline demo).
 Acceptance: every route leg visible, closed road visibly unavailable, no layout shift, works at 390px.
 
 ---
 
-### Phase 5 — Documentation · ~5–6 h · `[ ]`
-- Rewrite `README.md` (~180–250 lines): overview, screenshots, architecture, setup (`cp .env.example .env`, `db:migrate`, `db:seed`, two dev servers), scripts, credentials, API summary, **algorithm table with paradigms/complexities/baselines**, dataset spec, edge-case register, testing, deployment, known limitations, **stack deviations (no Tailwind, SVG/Leaflet, Recharts only where used)**.
-- Restore `docs/`: `ARCHITECTURE.md`, `BACKEND_SCHEMA.md` (20 tables + ERD), `ALGORITHMS.md` (pseudocode + complexity + tie rules + failure modes), `TESTING.md`, `DEPLOYMENT.md`, `SCOPE.md` (proposal → implementation mapping).
-- Regenerate the documentation PDF from markdown.
+### Phase 5 — Documentation · `[x]` DONE (scope reduced by decision)
+- `README.md` rewritten as the authoritative document: overview, architecture, live URLs, demo accounts, algorithm table (module paths + cross-checks), dataset spec, constraints, setup (`db:migrate`, `db:seed`, two dev servers), scripts, API summary, testing, known limitations, deviations.
+- `docs/` **retained as-is** (not regenerated): `ARCHITECTURE.md`, `BACKEND_SCHEMA.md`, `PRD.md`, `README.md`, `TECH_STACK.md`, three text diagrams, plus `NutriResQ_Detailed_Documentation.pdf`. These are earlier design documents; the root `README.md` is authoritative.
+- **No PDF regeneration** — the existing documentation PDF is kept unchanged.
 
 ---
 
-### Phase 6 — Email delivery · ~1.5–2 h · `[ ]`
-- `nodemailer` behind `SMTP_HOST/PORT/USER/PASS/FROM`; send verification + reset links; keep console fallback when unset; update `.env.example`.
+### Phase 6 — Email delivery · `[x]` DONE
+- `nodemailer` behind `SMTP_HOST/PORT/USER/PASS/FROM`; verification and reset links sent when `ENABLE_EMAIL=true` and SMTP is configured, console-link fallback otherwise; `nodemailer` added to `backend/package.json`; SMTP block added to `.env.example`.
+- Fix commit `78b590b`: missing `nodemailer` dependency + `ENABLE_EMAIL` parsed from a string ("true"/"false") rather than the boolean Zod default.
 
 ---
 
-### Phase 7 — Deployment + DB finalisation · ~3–4 h · `[ ]`
-- Frontend → Vercel: `VITE_API_BASE_URL`, SPA rewrite to `index.html`; convert 2.76 MB hero PNG → WebP (~300 KB) and switch the import.
-- Backend → Render/Railway: `NODE_ENV=production`, pooled `DATABASE_URL`, `FRONTEND_URL`, `SESSION_TOKEN_PEPPER`; cookie `Secure` + `SameSite=None`; verify CORS.
-- Neon: keep schema, delete demo rows, keep **1 admin + 1 real scenario**; add `db:create-admin`, `db:clear-demo`, `db:import-scenario`; verify with `db:status`.
-- Smoke test prod: health, login, run, benchmark.
+### Phase 7 — Deployment + DB finalisation · `[x]` LIVE
+- Frontend → Vercel: `VITE_API_BASE_URL` left **unset** in production; `vercel.json` **rewrites/proxies** `/api/:path*` to Render (a rewrite, not a redirect, so the browser stays on one origin); hero PNG converted to WebP (257 KB) and the `HomePage.tsx` import updated.
+- Backend → Render Web Service (root `backend`, branch `develop`, Node 22, free tier): `NODE_ENV=production`, pooled `DATABASE_URL`, `FRONTEND_URL=https://nutri-res-q.vercel.app` (no trailing slash), `SESSION_TOKEN_PEPPER`; session cookie **`SameSite=Lax` + `Secure` in production** (no `SameSite=None` — the single-origin proxy makes it unnecessary); CORS and CSRF origin locked to `FRONTEND_URL`; `nodemailer` behind `ENABLE_EMAIL` + `SMTP_*`.
+- Render build must run `npm install --include=dev && npm run build` because `NODE_ENV=production` makes npm skip TypeScript and `@types/*`.
+- Neon: schema kept (14/14 migrations applied); 1 admin + 1 real scenario (`Riverside District — Monday Rescue`) kept; **3 demo portal accounts retained deliberately** for the defence. No `db:create-admin` / `db:clear-demo` / `db:import-scenario` scripts were written — only the existing `db:migrate`, `db:seed`, `db:reset`, `db:status` exist.
+- Smoke test prod: health ✅ (`database:"up"`), admin login ✅ (direct and via the Vercel proxy), 4-portal logins ✅, one optimization run ✅, benchmark page ✅.
+- Post-deploy fix `1f9ece2`: operator precedence in `frontend/src/lib/api.ts` made dev resolve a relative base URL (404s); fixed with parentheses around the `import.meta.env.PROD` ternary.
 
 ---
 
-### Phase 8 — Repo hygiene + final QA · ~1–2 h · `[ ]`
-- Delete from repo root: `errors.txt`, `NutriResQ Food Rescue Logistics(1).png`, `D&AA Chapter 05.pdf`, `D&AA Chapter 07.pdf` (or move to `course-material/`), commit restored `docs/`.
-- Keep/add real `NutriResQ Food Rescue Logistics.png` hero.
-- Final pass: `npm run lint`, `npm run build`, `npm test`, `tsc --noEmit` (backend), 390 / 1024 / 1440 / 1920 visual check, all four logins, one full run.
-- Demo script for defence in `docs/DEMO.md`.
+### Phase 8 — Repo hygiene + final QA · `[x]` DONE
+- **Decision: delete nothing.** Stray files (`errors.txt`, `NutriResQ Food Rescue Logistics(1).png`, both hero PNGs, `frontend/src/assets/hero.png`, `NutriResQ_Detailed_Documentation.pdf`) stay on disk; `.gitignore` is expanded so they cannot be committed by accident.
+- `docs/` restored (the staged deletions were reverted) — the folder is kept as supplementary design material.
+- `README.md` refreshed: phases 1–8, Render/Vercel/Neon architecture, live URLs + cold-start note, demo accounts, real directory tree, 9-commit history, `SameSite=Lax` + proxy decision.
+- `DEMO.md` written at the repo root (six-minute defence path with click paths, fallbacks and an incident table).
+- Final pass: backend `tsc --noEmit` ✅, `npm test` ✅, `npm run build` ✅; frontend `tsc --noEmit -p tsconfig.app.json` ✅, `npm run lint` ✅, `npm run build` ✅; 390 / 1024 / 1440 / 1920 visual check; all four logins; one full optimization run.
+- Two mobile-layout defects found during QA and fixed in `AdminWorkspace.css`: the benchmark list grid sized its column to max-content (1151 px at a 390 px viewport, clipping every value) — now `grid-template-columns: minmax(0, 1fr)` with `min-width: 0` on the card; and `.opt-field--inline` could not shrink its select (12 px overflow on Scenarios) — now `flex-wrap: wrap` and `max-width: 100%` on the select. Verified at 390 px: `documentElement.scrollWidth` is 390 on every admin page and the benchmark card is 308 px wide with a single summary column.
 
 ---
 
@@ -261,11 +266,11 @@ Acceptance: every route leg visible, closed road visibly unavailable, no layout 
 - [x] `npm test` green with all six §6 categories covered
 - [x] Scenario simulator live: 5 change types + sensitivity + preserved original + comparison view
 - [x] ACO best/avg/worst visible in the UI (stored per vehicle, surfaced on Benchmarks + Algorithms lab; exhaustive/prefix checks exist)
-- [ ] Leaflet map (or documented decision + schematic) with all routes and closed roads
-- [ ] README + `docs/` restored and accurate; PDF regenerated
-- [ ] Deployed: Vercel frontend + Node backend + Neon (schema + admin + 1 scenario, no demo rows)
-- [ ] Repo clean, no stray files, hero image converted
-- [ ] 6-minute demo path rehearsed
+- [x] Leaflet map (or documented decision + schematic) with all routes and closed roads
+- [x] README rewritten and accurate; `docs/` retained as supplementary design documents (no PDF regeneration)
+- [x] Deployed: Vercel frontend + Render backend + Neon (schema + admin + 1 scenario + 3 demo portal accounts)
+- [x] Repo hygiene: stray files retained on disk but excluded via `.gitignore`; hero converted to WebP
+- [ ] 6-minute demo path rehearsed (`DEMO.md` written; live rehearsal pending)
 
 ---
 
