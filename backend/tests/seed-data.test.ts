@@ -155,9 +155,9 @@ describe('seed dataset: connectivity and edge cases', () => {
     expect(closed[0].label).toMatch(/closed/i);
   });
 
-  it('leaves Isolation Point unreachable through available roads only', () => {
+  it('leaves Nagan Chowrangi unreachable through available roads only', () => {
     const isolationId = seedLocationId(10);
-    expect(seedLocationName(10)).toBe('Isolation Point');
+    expect(seedLocationName(10)).toBe('Nagan Chowrangi');
 
     expect(graph.has(isolationId)).toBe(false);
     for (const [, edges] of graph) {
@@ -168,7 +168,7 @@ describe('seed dataset: connectivity and edge cases', () => {
     expect(reached.has(isolationId)).toBe(false);
   });
 
-  it('keeps every other location reachable from Central Depot', () => {
+  it('keeps every other location reachable from SITE Area depot', () => {
     const reached = reachableFrom(graph, seedLocationId(1));
     const isolationId = seedLocationId(10);
 

@@ -450,6 +450,87 @@
   color: var(--muted);
 }
 
+/* A* route map ------------------------------------------------------------ */
+
+.astar-map__replay {
+  margin-left: auto;
+}
+
+.astar-pin {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--white);
+  background: var(--charcoal);
+  color: var(--light-beige);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(41, 42, 36, 0.45);
+}
+
+.astar-pin--start {
+  background: #2f7d32;
+}
+
+.astar-pin--goal {
+  background: #292a24;
+}
+
+.astar-pin--inline {
+  width: 20px;
+  height: 20px;
+  font-size: 0.68rem;
+  box-shadow: none;
+}
+
+.route-map__swatch--astar {
+  height: 4px;
+  background: #2f7d32;
+}
+
+.route-map__swatch--dijkstra {
+  height: 4px;
+  background: #3f3b33;
+  opacity: 0.6;
+}
+
+.schematic__leg--dijkstra {
+  stroke: #3f3b33;
+  stroke-width: 5;
+  stroke-opacity: 0.5;
+}
+
+.schematic__leg--astar {
+  stroke: #2f7d32;
+  stroke-width: 2.5;
+  stroke-opacity: 0.95;
+}
+
+.schematic__pin {
+  stroke: var(--white);
+  stroke-width: 2;
+}
+
+.schematic__pin--start {
+  fill: #2f7d32;
+}
+
+.schematic__pin--goal {
+  fill: #292a24;
+}
+
+.schematic__swatch--astar {
+  background: #2f7d32;
+}
+
+.schematic__swatch--dijkstra {
+  background: #3f3b33;
+}
+
 /* Benchmarks -------------------------------------------------------------- */
 
 .benchmark-list {

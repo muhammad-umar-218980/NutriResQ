@@ -80,9 +80,9 @@ describe('optimization pipeline on the seed scenario', () => {
     expect(weight).toBeLessThanOrEqual(capacity);
   });
 
-  it('reports Isolation Point by name and never routes through the closed road', () => {
+  it('reports Nagan Chowrangi by name and never routes through the closed road', () => {
     const isolated = result.unreachable.filter(
-      (pair) => pair.fromName === 'Isolation Point' || pair.toName === 'Isolation Point',
+      (pair) => pair.fromName === 'Nagan Chowrangi' || pair.toName === 'Nagan Chowrangi',
     );
 
     expect(isolated.length).toBe(27 * 2);
@@ -105,7 +105,7 @@ describe('optimization pipeline on the seed scenario', () => {
     expect(
       result.warnings.some(
         (warning) =>
-          warning.code === 'location-disconnected' && warning.message.includes('Isolation Point'),
+          warning.code === 'location-disconnected' && warning.message.includes('Nagan Chowrangi'),
       ),
     ).toBe(true);
   });

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import type { FormEvent } from 'react'
 import BenchmarkTable from '../../components/app/BenchmarkTable'
 import {
@@ -23,10 +23,13 @@ import type {
   ClosestPairEvaluationResult,
   KnapsackEvaluationResult,
   OptimalityCheck,
+  ScenarioSnapshot,
   ScenariosResponse,
   SnapshotResponse,
 } from '../../types/domain'
 import './AdminWorkspace.css'
+
+const AstarRouteMap = lazy(() => import('../../components/app/AstarRouteMap'))
 
 type TabId = 'astar' | 'knapsack' | 'closest-pair' | 'aco'
 
@@ -193,7 +196,12 @@ function EvaluationNotices({
 export default function AdminAlgorithmsPage() {
   const scenarios = useApi<ScenariosResponse>('/api/scenarios')
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null)
-  const scenarioId = selectedScenarioId ?? scenarios.data?.scenarios[0]?.id ?? null
+  // Scenarios arrive newest first. Default to the seeded base scenario (the
+  // oldest) so the algorithm lab opens on the canonical road graph instead of
+  // on a stored variant, whose road costs may predate a data migration.
+  const scenarioList = scenarios.data?.scenarios ?? []
+  const scenarioId =
+    selectedScenarioId ?? scenarioList[scenarioList.length - 1]?.id ?? null
 
   const snapshot = useApi<SnapshotResponse>(
     scenarioId ? `/api/scenarios/${encodeURIComponent(scenarioId)}/snapshot` : null,
@@ -463,7 +471,9 @@ export default function AdminAlgorithmsPage() {
                   </div>
                 </form>
 
-                {astar ? <AstarResult evaluation={astar} /> : null}
+                {astar && snapshot.data ? (
+                  <AstarResult evaluation={astar} snapshot={snapshot.data.snapshot} />
+                ) : null}
               </Card>
             </>
           ) : null}
@@ -723,7 +733,13 @@ export default function AdminAlgorithmsPage() {
   )
 }
 
-function AstarResult({ evaluation }: { evaluation: AstarEvaluation }) {
+function AstarResult({
+  evaluation,
+  snapshot,
+}: {
+  evaluation: AstarEvaluation
+  snapshot: ScenarioSnapshot
+}) {
   return (
     <div className="evaluation">
       <p className="metric-note">{evaluation.note}</p>
@@ -763,6 +779,16 @@ function AstarResult({ evaluation }: { evaluation: AstarEvaluation }) {
           </p>
         </article>
       </div>
+
+      <Suspense
+        fallback={
+          <div className="route-map__canvas route-map__loading" role="status">
+            Loading Karachi map…
+          </div>
+        }
+      >
+        <AstarRouteMap snapshot={snapshot} evaluation={evaluation} />
+      </Suspense>
     </div>
   )
 }
