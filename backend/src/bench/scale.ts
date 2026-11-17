@@ -12,6 +12,9 @@
  * Algorithms lab and the benchmarks page.
  */
 
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { hostname, platform, arch } from 'node:os';
+import path from 'node:path';
 import { optimizeRouteWithACO, createDefaultACOConfig } from '../algorithms/aco';
 import { aStarSearch } from '../algorithms/astar';
 import { dijkstraSearch } from '../algorithms/dijkstra';
@@ -267,19 +270,64 @@ runClosestPairBenchmark();
 runKnapsackBenchmark();
 runAcoBenchmark();
 
-console.log('algorithm,instance,size,metric,value,unit,note');
-for (const row of rows) {
-  console.log(
-    [
-      row.algorithm,
-      row.instance,
-      row.size,
-      row.metric,
-      row.value,
-      row.unit,
-      row.note,
-    ]
-      .map(csvCell)
-      .join(','),
-  );
+/**
+ * `--out <file.ts>` also writes the same rows as a typed module, which the
+ * dashboard's scaling chart reads. The runtimes are measured on the machine
+ * that ran the script, so the header records where and when.
+ */
+const outIndex = process.argv.indexOf('--out');
+const outPath = outIndex >= 0 ? process.argv[outIndex + 1] : null;
+
+if (!outPath) {
+  console.log('algorithm,instance,size,metric,value,unit,note');
+  for (const row of rows) {
+    console.log(
+      [
+        row.algorithm,
+        row.instance,
+        row.size,
+        row.metric,
+        row.value,
+        row.unit,
+        row.note,
+      ]
+        .map(csvCell)
+        .join(','),
+    );
+  }
+}
+
+if (outPath) {
+  const header = `/**
+ * GENERATED FILE - do not edit by hand.
+ *
+ * Scaling benchmark measured by \`npm run bench:export\`
+ * (backend/src/bench/scale.ts). Each row is one deterministic synthetic
+ * instance; timings are wall-clock and therefore machine-specific.
+ *
+ * Machine: ${platform()} ${arch()} / ${hostname()}
+ * Generated: ${new Date().toISOString()}
+ */
+
+export interface ScaleBenchmarkRow {
+  algorithm: string;
+  instance: string;
+  size: number | null;
+  metric: string;
+  value: number | string;
+  unit: string;
+  note: string;
+}
+
+export const SCALE_BENCHMARK_ROWS: ScaleBenchmarkRow[] = [
+`;
+
+  const body = rows
+    .map((row) => `  ${JSON.stringify(row)},`)
+    .join('\n');
+
+  const target = path.resolve(process.cwd(), outPath);
+  mkdirSync(path.dirname(target), { recursive: true });
+  writeFileSync(target, `${header}${body}\n];\n`, 'utf8');
+  console.log(`\nwrote ${rows.length} row(s) to ${target}`);
 }

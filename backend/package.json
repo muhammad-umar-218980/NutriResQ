@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "bench:scale": "tsx src/bench/scale.ts",
+    "bench:export": "tsx src/bench/scale.ts --out ../frontend/src/data/scaleBenchmarks.ts",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:reset": "tsx src/db/reset.ts",

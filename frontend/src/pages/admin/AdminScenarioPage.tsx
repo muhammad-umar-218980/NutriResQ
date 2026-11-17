@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   Card,
@@ -39,6 +39,8 @@ import type {
   VehicleRecord,
 } from '../../types/domain'
 import './AdminScenario.css'
+
+const ScenarioDeltaChart = lazy(() => import('../../components/charts/ScenarioDeltaChart'))
 
 type EditorTab = 'roads' | 'vehicles' | 'packages' | 'recipients' | 'supply' | 'sensitivity'
 
@@ -678,7 +680,18 @@ export default function AdminScenarioPage() {
                 {comparison.error}
               </p>
             ) : comparison.data ? (
-              <ComparisonTable comparison={comparison.data.comparison} />
+              <>
+                <Suspense
+                  fallback={
+                    <div className="chart-canvas" role="status">
+                      Loading chart…
+                    </div>
+                  }
+                >
+                  <ScenarioDeltaChart comparison={comparison.data.comparison} />
+                </Suspense>
+                <ComparisonTable comparison={comparison.data.comparison} />
+              </>
             ) : (
               <p className="metric-note">
                 Run this scenario (and, for a variant, keep a run on the parent) to unlock the

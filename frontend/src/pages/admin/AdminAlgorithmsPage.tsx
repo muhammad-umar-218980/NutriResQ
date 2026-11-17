@@ -30,6 +30,7 @@ import type {
 import './AdminWorkspace.css'
 
 const AstarRouteMap = lazy(() => import('../../components/app/AstarRouteMap'))
+const AcoComparisonChart = lazy(() => import('../../components/charts/AcoComparisonChart'))
 
 type TabId = 'astar' | 'knapsack' | 'closest-pair' | 'aco'
 
@@ -665,6 +666,15 @@ export default function AdminAlgorithmsPage() {
                 <div className="evaluation">
                   <EvaluationNotices evaluation={aco} />
                   <TourSpreadTable rows={aco.result.tourStats} />
+                  <Suspense
+                    fallback={
+                      <div className="chart-canvas" role="status">
+                        Loading chart…
+                      </div>
+                    }
+                  >
+                    <AcoComparisonChart evaluation={aco} />
+                  </Suspense>
                   <div className="table-wrap">
                     <table className="data-table">
                       <caption>Routes measured by the run</caption>
