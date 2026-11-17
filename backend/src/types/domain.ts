@@ -24,6 +24,11 @@ export interface RoadRecord {
   costUnit: string;
   isAvailable: boolean;
   isBidirectional: boolean;
+  /**
+   * Street polyline as `[lat, lon]` pairs from the from-location to the
+   * to-location, or null when the road has no baked geometry yet.
+   */
+  geometry: [number, number][] | null;
 }
 
 export interface DonorRecord {

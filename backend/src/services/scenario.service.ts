@@ -22,6 +22,7 @@ import {
   projectedStateCount,
   selectTopUrgencyRecipients,
 } from '../lib/scenario-math';
+import { toPolyline } from '../repositories/road-geometry';
 import { findScenarioById, type ScenarioSummary } from '../repositories/scenario.repository';
 import { findRunById } from '../repositories/run.repository';
 import * as writes from '../repositories/scenario-write.repository';
@@ -69,6 +70,7 @@ function toRoad(row: writes.RoadRow): RoadRecord {
     costUnit: row.cost_unit,
     isAvailable: row.is_available,
     isBidirectional: row.is_bidirectional,
+    geometry: toPolyline(row.geometry),
   };
 }
 

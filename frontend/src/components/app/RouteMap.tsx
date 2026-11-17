@@ -1,16 +1,17 @@
 import { useEffect, useRef } from 'react'
 import * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { LocationRecord, ScenarioSnapshot, VehicleRoute } from '../../types/domain'
+import { indexRoads, pathPoints, roadPoints } from './routeGeometry'
+import type { ScenarioSnapshot, VehicleRoute } from '../../types/domain'
 
 /**
  * OpenStreetMap view of the stored scenario and the computed route legs.
  *
  * The basemap is real geography (stored latitude/longitude). The route polylines
- * follow the A* node sequence stored in `leg.path`, so they trace the road graph
- * as it exists in the database — not the actual street geometry, which is never
- * stored. When the tile server is unreachable the caller falls back to
- * `RouteSchematic`, which needs no network.
+ * follow the A* node sequence stored in `leg.path`, and each leg between two
+ * nodes is drawn along the baked street geometry of that road, so the line hugs
+ * the streets instead of cutting straight between pins. When the tile server is
+ * unreachable the caller falls back to `RouteSchematic`, which needs no network.
  */
 
 const ROUTE_COLOURS = ['#98482d', '#414a30', '#858c65', '#292a24', '#b85c38']
@@ -30,18 +31,6 @@ interface RouteMapProps {
   routes: VehicleRoute[]
   /** Called once per mount when the tile server keeps failing. */
   onTilesUnavailable?: () => void
-}
-
-function pathPoints(
-  path: string[],
-  locationById: Map<string, LocationRecord>,
-): Array<[number, number]> {
-  const points: Array<[number, number]> = []
-  for (const locationId of path) {
-    const location = locationById.get(locationId)
-    if (location) points.push([location.latitude, location.longitude])
-  }
-  return points
 }
 
 /** Popup body built from DOM nodes so stored names are never parsed as HTML. */
@@ -89,6 +78,7 @@ export default function RouteMap({ snapshot, routes, onTilesUnavailable }: Route
     if (locations.length === 0) return
 
     const locationById = new Map(locations.map((location) => [location.id, location]))
+    const roadIndex = indexRoads(snapshot.roads)
     const vehicleName = new Map(snapshot.vehicles.map((vehicle) => [vehicle.id, vehicle.name]))
 
     // Every stop each vehicle makes, so a location popup can say who visits it.
@@ -138,10 +128,7 @@ export default function RouteMap({ snapshot, routes, onTilesUnavailable }: Route
       if (!from || !to) continue
 
       L.polyline(
-        [
-          [from.latitude, from.longitude],
-          [to.latitude, to.longitude],
-        ],
+        roadPoints(road, from, to),
         road.isAvailable
           ? { color: '#c9c4b4', weight: 2, opacity: 0.9 }
           : { color: '#a4472b', weight: 2, opacity: 0.85, dashArray: '6 5' },
@@ -163,7 +150,7 @@ export default function RouteMap({ snapshot, routes, onTilesUnavailable }: Route
       const name = vehicleName.get(route.vehicleId) ?? route.vehicleId
 
       for (const leg of route.legs) {
-        let points = pathPoints(leg.path, locationById)
+        let points = pathPoints(leg.path, locationById, roadIndex)
         if (points.length < 2) {
           const from = locationById.get(leg.fromLocationId)
           const to = locationById.get(leg.toLocationId)
@@ -307,10 +294,10 @@ export default function RouteMap({ snapshot, routes, onTilesUnavailable }: Route
         ))}
 
         <span className="route-map__note">
-          Polylines follow the stored A* location sequence; street geometry is not stored, so lines
-          are as accurate as the road graph, not a turn-by-turn route. Click a marker or line for
-          costs and stops. Basemap tiles © OpenStreetMap contributors. Page scrolling is not
-          hijacked: zoom with the map buttons.
+          Polylines follow the stored A* location sequence, drawn along each road&apos;s street
+          geometry, so they run along roads rather than straight between pins. Click a marker or
+          line for costs and stops. Basemap tiles © OpenStreetMap contributors. Page scrolling is
+          not hijacked: zoom with the map buttons.
         </span>
       </figcaption>
     </figure>

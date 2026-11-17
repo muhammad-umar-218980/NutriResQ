@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { AstarEvaluation, LocationRecord, ScenarioSnapshot } from '../../types/domain'
+import { indexRoads, pathPoints, roadPoints, type Point } from './routeGeometry'
+import type { AstarEvaluation, ScenarioSnapshot } from '../../types/domain'
 
 /**
  * OpenStreetMap view of one A* search against the stored scenario.
@@ -12,9 +13,10 @@ import type { AstarEvaluation, LocationRecord, ScenarioSnapshot } from '../../ty
  * Where the lines coincide the grey halo is the visual proof that both
  * algorithms agree; where they diverge the grey branch is the path A* skipped.
  *
- * Street geometry is not stored, so the lines follow the road graph, not
- * turn-by-turn roads. If the tile server is unreachable the component falls
- * back to `AstarSchematic`, which needs no network.
+ * Street geometry is baked per road, so the lines follow the real streets
+ * between the pins rather than cutting straight across blocks. If the tile
+ * server is unreachable the component falls back to `AstarSchematic`, which
+ * needs no network.
  */
 
 const ROAD_AVAILABLE_COLOUR = '#d3cec0'
@@ -25,23 +27,9 @@ const ASTAR_COLOUR = '#2f7d32'
 const TILE_ERRORS_BEFORE_FALLBACK = 4
 const DRAW_DURATION_MS = 1200
 
-type Point = [number, number]
-
 interface AstarRouteMapProps {
   snapshot: ScenarioSnapshot
   evaluation: AstarEvaluation
-}
-
-function pathPoints(
-  path: string[],
-  locationById: Map<string, LocationRecord>,
-): Point[] {
-  const points: Point[] = []
-  for (const locationId of path) {
-    const location = locationById.get(locationId)
-    if (location) points.push([location.latitude, location.longitude])
-  }
-  return points
 }
 
 /** Popup body built from DOM nodes so stored names are never parsed as HTML. */
@@ -261,8 +249,9 @@ export default function AstarRouteMap({ snapshot, evaluation }: AstarRouteMapPro
     if (locations.length === 0) return
 
     const locationById = new Map(locations.map((location) => [location.id, location]))
-    const astarPoints = pathPoints(evaluation.astar.path, locationById)
-    const dijkstraPoints = pathPoints(evaluation.dijkstra.path, locationById)
+    const roadIndex = indexRoads(snapshot.roads)
+    const astarPoints = pathPoints(evaluation.astar.path, locationById, roadIndex)
+    const dijkstraPoints = pathPoints(evaluation.dijkstra.path, locationById, roadIndex)
 
     const map = L.map(container, {
       scrollWheelZoom: false,
@@ -289,10 +278,7 @@ export default function AstarRouteMap({ snapshot, evaluation }: AstarRouteMapPro
       if (!from || !to) continue
 
       L.polyline(
-        [
-          [from.latitude, from.longitude],
-          [to.latitude, to.longitude],
-        ],
+        roadPoints(road, from, to),
         road.isAvailable
           ? { color: ROAD_AVAILABLE_COLOUR, weight: 1.5, opacity: 0.9 }
           : { color: ROAD_CLOSED_COLOUR, weight: 2, opacity: 0.9, dashArray: '6 5' },
@@ -510,9 +496,9 @@ export default function AstarRouteMap({ snapshot, evaluation }: AstarRouteMapPro
         ) : null}
 
         <span className="route-map__note">
-          Lines follow the stored A* location sequence over the road graph, not turn-by-turn street
-          geometry. Where the green line sits inside the grey halo, A* and Dijkstra chose the same
-          path. Basemap tiles © OpenStreetMap contributors.
+          Lines follow each road&apos;s stored street geometry between the A* locations, so they run
+          along roads rather than straight between pins. Where the green line sits inside the grey
+          halo, A* and Dijkstra chose the same path. Basemap tiles © OpenStreetMap contributors.
         </span>
       </figcaption>
     </figure>

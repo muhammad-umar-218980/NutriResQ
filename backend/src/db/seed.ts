@@ -12,6 +12,7 @@ import {
   SEED_SCENARIO,
   SEED_VEHICLES,
   roadCostKm,
+  roadGeometry,
   type SeedDemoUser,
 } from './seed-data';
 
@@ -56,6 +57,11 @@ function locationId(index: number): string {
   const location = SEED_LOCATIONS[index - 1];
   if (!location) throw new Error(`Seed location index ${index} is out of range.`);
   return location.id;
+}
+
+/** jsonb value for a road polyline; null leaves the road without geometry. */
+function geometryJson(geometry: { points: [number, number][] } | null): string | null {
+  return geometry ? JSON.stringify(geometry.points) : null;
 }
 
 async function seedDemoAccount(
@@ -152,8 +158,8 @@ async function seedScenarioData(client: PoolClient): Promise<void> {
   for (const road of SEED_ROADS) {
     await client.query(
       `INSERT INTO roads
-         (id, scenario_id, from_location_id, to_location_id, cost, cost_unit, is_available, is_bidirectional, label)
-       VALUES ($1, $2, $3, $4, $5, 'km', $6, $7, $8)
+         (id, scenario_id, from_location_id, to_location_id, cost, cost_unit, is_available, is_bidirectional, label, geometry)
+       VALUES ($1, $2, $3, $4, $5, 'km', $6, $7, $8, $9)
        ON CONFLICT (id) DO UPDATE
          SET from_location_id = EXCLUDED.from_location_id,
              to_location_id = EXCLUDED.to_location_id,
@@ -161,6 +167,7 @@ async function seedScenarioData(client: PoolClient): Promise<void> {
              is_available = EXCLUDED.is_available,
              is_bidirectional = EXCLUDED.is_bidirectional,
              label = EXCLUDED.label,
+             geometry = EXCLUDED.geometry,
              updated_at = now()`,
       [
         road.id,
@@ -171,6 +178,7 @@ async function seedScenarioData(client: PoolClient): Promise<void> {
         road.isAvailable ?? true,
         road.isBidirectional ?? true,
         road.label ?? null,
+        geometryJson(roadGeometry(road)),
       ],
     );
   }
@@ -285,6 +293,50 @@ async function seedScenarioData(client: PoolClient): Promise<void> {
   }
 }
 
+function pairKey(fromLocationId: string, toLocationId: string): string {
+  return `${fromLocationId}|${toLocationId}`;
+}
+
+/**
+ * Street geometry is a property of the two locations, not of the scenario, so
+ * derived scenarios (clones of the base) can reuse the baked polylines even
+ * though their own costs were captured earlier. Only rows with no geometry are
+ * touched: a road's cost is left exactly as stored, and nothing is overwritten.
+ */
+async function backfillRoadGeometry(client: PoolClient): Promise<number> {
+  const geometryByPair = new Map<string, string>();
+
+  for (const road of SEED_ROADS) {
+    const geometry = roadGeometry(road);
+    if (!geometry) continue;
+
+    const fromId = locationId(road.fromIndex);
+    const toId = locationId(road.toIndex);
+    geometryByPair.set(pairKey(fromId, toId), JSON.stringify(geometry.points));
+    geometryByPair.set(pairKey(toId, fromId), JSON.stringify([...geometry.points].reverse()));
+  }
+
+  const pending = await client.query<{ id: string; from_location_id: string; to_location_id: string }>(
+    `SELECT id, from_location_id, to_location_id
+       FROM roads
+      WHERE scenario_id <> $1 AND geometry IS NULL`,
+    [SEED_SCENARIO.id],
+  );
+
+  let updated = 0;
+  for (const row of pending.rows) {
+    const geometry = geometryByPair.get(pairKey(row.from_location_id, row.to_location_id));
+    if (!geometry) continue;
+    await client.query('UPDATE roads SET geometry = $2, updated_at = now() WHERE id = $1', [
+      row.id,
+      geometry,
+    ]);
+    updated += 1;
+  }
+
+  return updated;
+}
+
 export async function seedDatabase(): Promise<string[]> {
   const lines: string[] = [];
 
@@ -305,6 +357,11 @@ export async function seedDatabase(): Promise<string[]> {
         `${SEED_DONORS.length} donors, ${SEED_RECIPIENTS.length} recipients, ${SEED_DONATIONS.length} donations, ` +
         `${SEED_VEHICLES.length} vehicles)`,
     );
+
+    const backfilled = await backfillRoadGeometry(client);
+    if (backfilled > 0) {
+      lines.push(`street geometry backfilled on ${backfilled} road(s) in other scenarios`);
+    }
   });
 
   return lines;

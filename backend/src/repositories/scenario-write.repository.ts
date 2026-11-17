@@ -157,9 +157,9 @@ export async function copyRoads(
   const result = await client.query(
     `INSERT INTO roads
        (scenario_id, from_location_id, to_location_id, cost, cost_unit,
-        is_available, is_bidirectional, label)
+        is_available, is_bidirectional, label, geometry)
      SELECT $1, from_location_id, to_location_id, cost, cost_unit,
-            is_available, is_bidirectional, label
+            is_available, is_bidirectional, label, geometry
        FROM roads
       WHERE scenario_id = $2`,
     [targetScenarioId, sourceScenarioId],
@@ -376,6 +376,7 @@ export interface RoadRow {
   cost_unit: string;
   is_available: boolean;
   is_bidirectional: boolean;
+  geometry: unknown;
 }
 
 export async function findRoadForUpdate(
