@@ -11,6 +11,7 @@
 import { aStarSearch } from '../algorithms/astar';
 import { dijkstraSearch, reconstructDijkstraPath } from '../algorithms/dijkstra';
 import { buildHeuristic, buildRoadGraph, projectLocations } from '../algorithms/lib/graph';
+import { verifyOptimalitySmall, type OptimalityCheck } from '../algorithms/lib/optimality';
 import { NotFoundError } from '../errors/app-error';
 import { loadScenarioSnapshot } from '../repositories/scenario.repository';
 import type {
@@ -37,6 +38,23 @@ function benchmarkFor(
   algorithmName: string,
 ): BenchmarkRecord | null {
   return benchmarks.find((benchmark) => benchmark.algorithmName === algorithmName) ?? null;
+}
+
+function skippedOptimalityCheck(reason: string, requestedItemCount = 0): OptimalityCheck {
+  return {
+    attempted: false,
+    reason,
+    itemCount: 0,
+    requestedItemCount,
+    vehicleCount: 0,
+    enumerationCount: 0,
+    enumerationLimit: 0,
+    dpValue: null,
+    exhaustiveValue: null,
+    match: null,
+    reduced: false,
+    dp: null,
+  };
 }
 
 export interface AstarEvaluation {
@@ -81,12 +99,10 @@ export async function evaluateAstar(input: {
   const graph = buildRoadGraph(snapshot.roads);
   const projected = projectLocations(snapshot.locations);
   const costUnit = snapshot.roads.find((road) => road.costUnit)?.costUnit ?? 'km';
-  const baseHeuristic =
+  const heuristic: (nodeId: string | number) => number =
     input.heuristic === 'zero'
       ? () => 0
       : buildHeuristic(costUnit, projected, input.toLocationId);
-  const heuristic = (nodeId: string | number): number =>
-    baseHeuristic(typeof nodeId === 'string' ? nodeId : String(nodeId));
 
   const astarStartedAt = performance.now();
   const astar = aStarSearch(graph, input.fromLocationId, input.toLocationId, heuristic);
@@ -160,12 +176,14 @@ async function runPipeline(
 export async function evaluateKnapsack(input: {
   scenarioId: string;
   maxStates?: number;
+  verifyOptimality?: boolean;
 }): Promise<
   AlgorithmEvaluation<{
     allocations: OptimizationResult['allocations'];
     unallocated: OptimizationResult['unallocated'];
     metrics: OptimizationResult['metrics'];
     inputCounts: OptimizationResult['inputCounts'];
+    optimalityCheck: OptimalityCheck;
   }>
 > {
   const outcome = await runPipeline(input.scenarioId, {
@@ -173,12 +191,45 @@ export async function evaluateKnapsack(input: {
   });
   const { result } = outcome;
 
+  let optimalityCheck: OptimalityCheck;
+
+  if (input.verifyOptimality === false) {
+    optimalityCheck = skippedOptimalityCheck(
+      'The exhaustive cross-check was switched off for this request.',
+      outcome.allocationInstance?.items.length ?? 0,
+    );
+  } else if (!outcome.allocationInstance) {
+    optimalityCheck = skippedOptimalityCheck(
+      'The run failed before the DP instance was built.',
+    );
+  } else {
+    try {
+      optimalityCheck = verifyOptimalitySmall(
+        outcome.allocationInstance.items.map((item) => ({
+          id: item.donationId,
+          weightUnits: item.weightUnits,
+          value: item.value,
+        })),
+        outcome.allocationInstance.capacities,
+        { maxStates: result.algorithmConfig.knapsack.maxStates },
+      );
+    } catch (error) {
+      optimalityCheck = skippedOptimalityCheck(
+        error instanceof Error
+          ? `The cross-check could not run: ${error.message}`
+          : 'The cross-check could not run.',
+        outcome.allocationInstance.items.length,
+      );
+    }
+  }
+
   return {
     result: {
       allocations: result.allocations,
       unallocated: result.unallocated,
       metrics: result.metrics,
       inputCounts: result.inputCounts,
+      optimalityCheck,
     },
     benchmark: benchmarkFor(outcome.benchmarks, 'multiple-knapsack-dp'),
     warnings: result.warnings,
@@ -186,7 +237,9 @@ export async function evaluateKnapsack(input: {
     algorithmConfig: result.algorithmConfig,
     note:
       'Exact multiple-knapsack DP (value_score * recipient_priority, integer kilogram units), ' +
-      'compared with the greedy value-density baseline on identical inputs.',
+      'compared with the greedy value-density baseline on identical inputs. The optimality ' +
+      'check enumerates a deterministic prefix of the same instance; exponential, so it is ' +
+      'evidence for that prefix, not a proof for the whole scenario.',
   };
 }
 
@@ -198,6 +251,8 @@ export async function evaluateAco(input: {
     routes: OptimizationResult['routes'];
     unreachable: OptimizationResult['unreachable'];
     metrics: OptimizationResult['metrics'];
+    /** Per-vehicle trial-cost distribution (best / average / worst). */
+    tourStats: OptimizationResult['acoTours'];
   }>
 > {
   const outcome = await runPipeline(input.scenarioId, input.overrides ?? {});
@@ -208,6 +263,7 @@ export async function evaluateAco(input: {
       routes: result.routes,
       unreachable: result.unreachable,
       metrics: result.metrics,
+      tourStats: result.acoTours,
     },
     benchmark: benchmarkFor(outcome.benchmarks, 'aco'),
     warnings: result.warnings,

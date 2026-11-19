@@ -75,6 +75,7 @@
 
 .opt-field--inline {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
@@ -82,6 +83,7 @@
 .opt-field--inline select {
   width: auto;
   min-width: 180px;
+  max-width: 100%;
 }
 
 /* Scenario facts and run metadata ----------------------------------------- */
@@ -344,14 +346,201 @@
   color: var(--muted);
 }
 
+/* Leaflet map ------------------------------------------------------------- */
+
+.route-map {
+  margin: 0;
+}
+
+.route-map__canvas {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  width: 100%;
+  height: clamp(320px, 46vw, 480px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--white);
+}
+
+.route-map__canvas.leaflet-container {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--charcoal);
+}
+
+/* Same box as the map, so the lazy chunk arriving cannot shift the layout. */
+.route-map__loading {
+  display: grid;
+  place-content: center;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.route-map__canvas .leaflet-control-zoom a {
+  color: var(--charcoal);
+}
+
+/* Leaflet renders popups as HTML; keep the same text rhythm as the app. */
+.route-map__popup {
+  display: grid;
+  gap: 2px;
+  min-width: 160px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--charcoal);
+}
+
+.route-map__popup strong {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 400;
+}
+
+.route-map__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 12px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.route-map__legend-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--charcoal);
+}
+
+.route-map__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.route-map__swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--charcoal);
+}
+
+.route-map__swatch--road {
+  background: #c9c4b4;
+}
+
+.route-map__swatch--closed {
+  background: var(--rust);
+}
+
+.route-map__swatch--dot {
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--white);
+  border-radius: 50%;
+}
+
+.route-map__note {
+  flex-basis: 100%;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* A* route map ------------------------------------------------------------ */
+
+.astar-map__replay {
+  margin-left: auto;
+}
+
+.astar-pin {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--white);
+  background: var(--charcoal);
+  color: var(--light-beige);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(41, 42, 36, 0.45);
+}
+
+.astar-pin--start {
+  background: #2f7d32;
+}
+
+.astar-pin--goal {
+  background: #292a24;
+}
+
+.astar-pin--inline {
+  width: 20px;
+  height: 20px;
+  font-size: 0.68rem;
+  box-shadow: none;
+}
+
+.route-map__swatch--astar {
+  height: 4px;
+  background: #2f7d32;
+}
+
+.route-map__swatch--dijkstra {
+  height: 4px;
+  background: #3f3b33;
+  opacity: 0.6;
+}
+
+.schematic__leg--dijkstra {
+  stroke: #3f3b33;
+  stroke-width: 5;
+  stroke-opacity: 0.5;
+}
+
+.schematic__leg--astar {
+  stroke: #2f7d32;
+  stroke-width: 2.5;
+  stroke-opacity: 0.95;
+}
+
+.schematic__pin {
+  stroke: var(--white);
+  stroke-width: 2;
+}
+
+.schematic__pin--start {
+  fill: #2f7d32;
+}
+
+.schematic__pin--goal {
+  fill: #292a24;
+}
+
+.schematic__swatch--astar {
+  background: #2f7d32;
+}
+
+.schematic__swatch--dijkstra {
+  background: #3f3b33;
+}
+
 /* Benchmarks -------------------------------------------------------------- */
 
 .benchmark-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
 }
 
 .benchmark {
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
   background: var(--white);
@@ -502,6 +691,11 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 20px;
+}
+
+/* Inside a card head the row is an inline control, not a page block. */
+.tab-row--inline {
+  margin-bottom: 0;
 }
 
 .tab {

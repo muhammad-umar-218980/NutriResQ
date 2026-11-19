@@ -6,6 +6,7 @@ import AdminAlgorithmsPage from './pages/admin/AdminAlgorithmsPage'
 import AdminBenchmarksPage from './pages/admin/AdminBenchmarksPage'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminOverviewPage from './pages/admin/AdminOverviewPage'
+import AdminScenarioPage from './pages/admin/AdminScenarioPage'
 import AdminUsersPage from './pages/admin/AdminUsersPage'
 import AdminWorkspacePage from './pages/admin/AdminWorkspacePage'
 import AdminLoginPage from './pages/AdminLoginPage'
@@ -83,6 +84,7 @@ function App() {
           >
             <Route index element={<AdminOverviewPage />} />
             <Route path="workspace" element={<AdminWorkspacePage />} />
+            <Route path="scenarios" element={<AdminScenarioPage />} />
             <Route path="algorithms" element={<AdminAlgorithmsPage />} />
             <Route path="benchmarks" element={<AdminBenchmarksPage />} />
             <Route path="donors" element={<AdminUsersPage key="donor" role="donor" />} />

@@ -1,5 +1,7 @@
 /** Shared domain types used by the algorithm modules, orchestrator and API. */
 
+import type { ACOTourSummary, ACOTrialStat } from '../algorithms/aco';
+
 export type LocationType = 'donor' | 'recipient' | 'hub' | 'other';
 
 export interface LocationRecord {
@@ -22,6 +24,11 @@ export interface RoadRecord {
   costUnit: string;
   isAvailable: boolean;
   isBidirectional: boolean;
+  /**
+   * Street polyline as `[lat, lon]` pairs from the from-location to the
+   * to-location, or null when the road has no baked geometry yet.
+   */
+  geometry: [number, number][] | null;
 }
 
 export interface DonorRecord {
@@ -177,6 +184,18 @@ export interface UnreachablePair {
   reason: string;
 }
 
+/**
+ * ACO diagnostics for one vehicle. Stored with the run result so the benchmark
+ * page can show best/average/worst tour costs without recomputing anything.
+ */
+export interface ACOTourStatRow {
+  vehicleId: string;
+  vehicleName: string;
+  jobCount: number;
+  trialStats: ACOTrialStat[];
+  tourSummary: ACOTourSummary;
+}
+
 export interface ClosestPairResult {
   distanceMeters: number | null;
   p1: { id: string; name: string } | null;
@@ -213,6 +232,8 @@ export interface OptimizationResult {
   allocations: Allocation[];
   unallocated: UnallocatedPackage[];
   routes: VehicleRoute[];
+  /** Per-vehicle ACO search diagnostics: trial costs, best/average/worst. */
+  acoTours: ACOTourStatRow[];
   unreachable: UnreachablePair[];
   closestPair: ClosestPairResult | null;
   warnings: Warning[];
@@ -237,6 +258,54 @@ export interface BenchmarkRecord {
   resultSummary: Record<string, unknown>;
   runtimeMs: number;
   trialNumber: number;
+}
+
+/** One audited simulator edit. The normalized source rows stay authoritative. */
+export interface ScenarioChangeRecord {
+  id: string;
+  scenarioId: string;
+  sourceRunId: string | null;
+  changeType:
+    | 'clone'
+    | 'road_availability'
+    | 'vehicle_update'
+    | 'donation_update'
+    | 'recipient_update'
+    | 'supply_reduced'
+    | 'urgency_removed';
+  targetEntityType: 'scenario' | 'road' | 'vehicle' | 'donation' | 'recipient';
+  targetEntityId: string | null;
+  beforeValue: Record<string, unknown>;
+  afterValue: Record<string, unknown>;
+  createdAt: string;
+}
+
+/** Exact-DP state space implied by the fleet that is currently available. */
+export interface StateSpaceInfo {
+  vehicleCount: number;
+  projectedStateCount: number;
+  maxStates: number;
+  exceedsLimit: boolean;
+}
+
+/** One metric delta between a base run and a variant run. */
+export interface MetricDelta {
+  metric: string;
+  label: string;
+  unit: string;
+  base: number;
+  variant: number;
+  delta: number;
+  deltaPercent: number | null;
+  lowerIsBetter: boolean;
+}
+
+export interface RunComparison {
+  scenarioId: string;
+  base: RunSummary;
+  variant: RunSummary;
+  deltas: MetricDelta[];
+  notes: string[];
 }
 
 export type RunStatus = 'running' | 'succeeded' | 'partial' | 'failed';

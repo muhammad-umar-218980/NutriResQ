@@ -25,6 +25,11 @@ export interface RoadRecord {
   costUnit: string
   isAvailable: boolean
   isBidirectional: boolean
+  /**
+   * Street polyline as `[lat, lon]` pairs from the from-location to the
+   * to-location, or null when the road has no baked geometry yet.
+   */
+  geometry: [number, number][] | null
 }
 
 export interface DonorRecord {
@@ -196,14 +201,54 @@ export interface ClosestPairResult {
   note: string
 }
 
+/** Cost spread of the ants inside one ACO trial (complete tours only). */
+export interface ACOTrialStat {
+  trial: number
+  ants: number
+  completeTours: number
+  bestCost: number | null
+  averageCost: number | null
+  worstCost: number | null
+}
+
+export interface ACOTourSummary {
+  bestTourCost: number | null
+  averageTourCost: number | null
+  worstTourCost: number | null
+  completeTours: number
+  totalTours: number
+}
+
+export interface ACOTourStatRow {
+  vehicleId: string
+  vehicleName: string
+  jobCount: number
+  trialStats: ACOTrialStat[]
+  tourSummary: ACOTourSummary
+}
+
+/** Result of the DP-vs-exhaustive cross-check in the Algorithms lab. */
+export interface OptimalityCheck {
+  attempted: boolean
+  reason: string | null
+  itemCount: number
+  requestedItemCount: number
+  vehicleCount: number
+  enumerationCount: number
+  enumerationLimit: number
+  dpValue: number | null
+  exhaustiveValue: number | null
+  match: boolean | null
+  reduced: boolean
+  dp: unknown
+}
+
 export interface Warning {
   code: string
   message: string
   entityType?: string
   entityId?: string
-}
-
-export interface Metrics {
+}export interface Metrics {
   allocatedPackageValue: number
   allocatedPackageWeightUnits: number
   unallocatedPackageCount: number
@@ -223,6 +268,8 @@ export interface OptimizationResult {
   allocations: Allocation[]
   unallocated: UnallocatedPackage[]
   routes: VehicleRoute[]
+  /** Per-vehicle ACO trial-cost distribution, stored with the run. */
+  acoTours: ACOTourStatRow[]
   unreachable: UnreachablePair[]
   closestPair: ClosestPairResult | null
   warnings: Warning[]
@@ -276,6 +323,125 @@ export interface RunDetail extends RunSummary {
 export interface ScenariosResponse {
   success: boolean
   scenarios: ScenarioSummary[]
+}
+
+/** One audited simulator edit. Mirrors backend `ScenarioChangeRecord`. */
+export interface ScenarioChangeRecord {
+  id: string
+  scenarioId: string
+  sourceRunId: string | null
+  changeType:
+    | 'clone'
+    | 'road_availability'
+    | 'vehicle_update'
+    | 'donation_update'
+    | 'recipient_update'
+    | 'supply_reduced'
+    | 'urgency_removed'
+  targetEntityType: 'scenario' | 'road' | 'vehicle' | 'donation' | 'recipient'
+  targetEntityId: string | null
+  beforeValue: Record<string, unknown>
+  afterValue: Record<string, unknown>
+  createdAt: string
+}
+
+export interface StateSpaceInfo {
+  vehicleCount: number
+  projectedStateCount: number
+  maxStates: number
+  exceedsLimit: boolean
+}
+
+export interface MetricDelta {
+  metric: string
+  label: string
+  unit: string
+  base: number
+  variant: number
+  delta: number
+  deltaPercent: number | null
+  lowerIsBetter: boolean
+}
+
+export interface RunComparison {
+  scenarioId: string
+  base: RunSummary
+  variant: RunSummary
+  deltas: MetricDelta[]
+  notes: string[]
+}
+
+export interface ScenarioChangesResponse {
+  success: boolean
+  changes: ScenarioChangeRecord[]
+}
+
+export interface ComparisonResponse {
+  success: boolean
+  comparison: RunComparison
+}
+
+/** A donation patch echoes the fields it can change, not the joined snapshot row. */
+export interface PatchedDonation {
+  id: string
+  packageName: string
+  weightUnits: number
+  valueScore: number
+  status: DonationStatus
+}
+
+export interface RoadMutationResponse {
+  success: boolean
+  changed: boolean
+  change: ScenarioChangeRecord | null
+  road?: RoadRecord
+}
+
+export interface VehicleMutationResponse {
+  success: boolean
+  changed: boolean
+  change: ScenarioChangeRecord | null
+  vehicle?: VehicleRecord
+  stateSpace?: StateSpaceInfo
+}
+
+export interface DonationMutationResponse {
+  success: boolean
+  changed: boolean
+  change: ScenarioChangeRecord | null
+  donation?: PatchedDonation
+}
+
+export interface RecipientMutationResponse {
+  success: boolean
+  changed: boolean
+  change: ScenarioChangeRecord | null
+  recipient?: RecipientRecord
+}
+
+export interface CloneScenarioResponse {
+  success: boolean
+  scenario: ScenarioSummary
+}
+
+export interface SensitivityResponse {
+  success: boolean
+  scenario: ScenarioSummary
+  disabledRecipients: RecipientRecord[]
+  changes: ScenarioChangeRecord[]
+  note: string
+}
+
+export interface SupplyReduceResponse {
+  success: boolean
+  summary: {
+    percent: number
+    donationCount: number
+    affectedCount: number
+    totalWeightBefore: number
+    totalWeightAfter: number
+  }
+  change: ScenarioChangeRecord
 }
 
 export interface ScenarioResponse {
@@ -340,12 +506,14 @@ export interface KnapsackEvaluationResult {
   unallocated: UnallocatedPackage[]
   metrics: Metrics
   inputCounts: OptimizationResult['inputCounts']
+  optimalityCheck: OptimalityCheck
 }
 
 export interface AcoEvaluationResult {
   routes: VehicleRoute[]
   unreachable: UnreachablePair[]
   metrics: Metrics
+  tourStats: ACOTourStatRow[]
 }
 
 export interface ClosestPairEvaluationResult {

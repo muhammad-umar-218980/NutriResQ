@@ -41,6 +41,8 @@ export const astarSchema = z.object({
 export const knapsackSchema = z.object({
   scenarioId: z.string().uuid(),
   maxStates: z.number().int().min(1).max(5_000_000).optional(),
+  /** Run the exhaustive cross-check on a small prefix (default true). */
+  verifyOptimality: z.boolean().optional(),
 });
 
 export const closestPairSchema = z.object({

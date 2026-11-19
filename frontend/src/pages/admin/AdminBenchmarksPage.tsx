@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import BenchmarkTable from '../../components/app/BenchmarkTable'
 import {
   Card,
@@ -16,6 +16,10 @@ import type {
   ScenariosResponse,
 } from '../../types/domain'
 import './AdminWorkspace.css'
+
+const BenchmarkScalingChart = lazy(
+  () => import('../../components/charts/BenchmarkScalingChart'),
+)
 
 function formatInt(value: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
@@ -175,9 +179,11 @@ export default function AdminBenchmarksPage() {
                 not road distance, and equal distances only mean the two implementations agree.
               </li>
               <li>
-                <strong>ACO vs nearest neighbour</strong> — ACO is a seeded heuristic. A lower cost
+                <strong>ACO vs nearest neighbour</strong> - ACO is a seeded heuristic. A lower cost
                 than the baseline is an observation for that seed and trial count, not a
-                guarantee of optimality.
+                guarantee of optimality. Best / average / worst tour cost come from the ants
+                themselves: average and worst ignore incomplete tours, so a stuck ant cannot
+                make the search look better than it was.
               </li>
             </ul>
           </Card>
@@ -232,6 +238,21 @@ function RunBenchmarks({ run }: { run: RunDetail }) {
             {run.errorMessage}
           </p>
         ) : null}
+      </Card>
+
+      <Card
+        title="Scaling benchmark"
+        description="Measured runtime as the input grows. This is a separate, reproducible experiment from the stored run below: deterministic synthetic instances, not this scenario's own run."
+      >
+        <Suspense
+          fallback={
+            <div className="chart-canvas" role="status">
+              Loading chart…
+            </div>
+          }
+        >
+          <BenchmarkScalingChart />
+        </Suspense>
       </Card>
 
       <Card

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import type { FormEvent } from 'react'
 import BenchmarkTable from '../../components/app/BenchmarkTable'
 import {
@@ -16,15 +16,21 @@ import {
   evaluateKnapsack,
 } from '../../lib/domain-api'
 import type {
+  ACOTourStatRow,
   AcoEvaluationResult,
   AlgorithmEvaluation,
   AstarEvaluation,
   ClosestPairEvaluationResult,
   KnapsackEvaluationResult,
+  OptimalityCheck,
+  ScenarioSnapshot,
   ScenariosResponse,
   SnapshotResponse,
 } from '../../types/domain'
 import './AdminWorkspace.css'
+
+const AstarRouteMap = lazy(() => import('../../components/app/AstarRouteMap'))
+const AcoComparisonChart = lazy(() => import('../../components/charts/AcoComparisonChart'))
 
 type TabId = 'astar' | 'knapsack' | 'closest-pair' | 'aco'
 
@@ -66,6 +72,94 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'The algorithm evaluation failed.'
 }
 
+/** Evidence, not proof: the check covers a deterministic prefix of this instance. */
+function OptimalityNotice({ check }: { check: OptimalityCheck }) {
+  if (!check.attempted) {
+    return (
+      <p className="metric-note">
+        <strong>DP vs exhaustive:</strong> not checked. {check.reason}
+      </p>
+    )
+  }
+
+  const verdict = check.match ? 'Agrees' : 'Disagrees'
+  return (
+    <div className={check.match ? 'notice notice--success' : 'notice notice--error'}>
+      <p>
+        <strong>DP vs exhaustive: {verdict}.</strong>{' '}
+        {check.match
+          ? `The DP and brute-force enumeration both reach ${formatInt(
+              check.dpValue ?? 0,
+            )} objective value.`
+          : `DP returned ${formatInt(check.dpValue ?? 0)}, exhaustive returned ${formatInt(
+              check.exhaustiveValue ?? 0,
+            )}. That is a bug, not a heuristic gap.`}
+      </p>
+      <p>
+        Compared {check.itemCount} of {check.requestedItemCount} package(s) across{' '}
+        {check.vehicleCount} vehicle(s): {formatInt(check.enumerationCount)} assignments,
+        limit {formatInt(check.enumerationLimit)}.
+        {check.reduced
+          ? ' Only a deterministic prefix was compared; the full scenario is too large to enumerate.'
+          : ' The whole DP instance was compared.'}
+      </p>
+    </div>
+  )
+}
+
+function TourSpreadTable({ rows }: { rows: ACOTourStatRow[] }) {
+  if (rows.length === 0) {
+    return <p className="metric-note">No vehicle ran ACO in this evaluation.</p>
+  }
+
+  return (
+    <div className="table-wrap">
+      <table className="data-table">
+        <caption>
+          Ant tour cost spread per vehicle. Average and worst are computed over complete tours
+          only, so a stuck ant cannot flatter the average.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Vehicle</th>
+            <th scope="col">Jobs</th>
+            <th scope="col">Complete tours</th>
+            <th scope="col">Best cost</th>
+            <th scope="col">Average cost</th>
+            <th scope="col">Worst cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.vehicleId}>
+              <th scope="row">{row.vehicleName}</th>
+              <td>{row.jobCount}</td>
+              <td>
+                {row.tourSummary.completeTours} / {row.tourSummary.totalTours}
+              </td>
+              <td>
+                {row.tourSummary.bestTourCost === null
+                  ? '—'
+                  : formatNumber(row.tourSummary.bestTourCost, 2)}
+              </td>
+              <td>
+                {row.tourSummary.averageTourCost === null
+                  ? '—'
+                  : formatNumber(row.tourSummary.averageTourCost, 2)}
+              </td>
+              <td>
+                {row.tourSummary.worstTourCost === null
+                  ? '—'
+                  : formatNumber(row.tourSummary.worstTourCost, 2)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function EvaluationNotices({
   evaluation,
 }: {
@@ -103,7 +197,12 @@ function EvaluationNotices({
 export default function AdminAlgorithmsPage() {
   const scenarios = useApi<ScenariosResponse>('/api/scenarios')
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null)
-  const scenarioId = selectedScenarioId ?? scenarios.data?.scenarios[0]?.id ?? null
+  // Scenarios arrive newest first. Default to the seeded base scenario (the
+  // oldest) so the algorithm lab opens on the canonical road graph instead of
+  // on a stored variant, whose road costs may predate a data migration.
+  const scenarioList = scenarios.data?.scenarios ?? []
+  const scenarioId =
+    selectedScenarioId ?? scenarioList[scenarioList.length - 1]?.id ?? null
 
   const snapshot = useApi<SnapshotResponse>(
     scenarioId ? `/api/scenarios/${encodeURIComponent(scenarioId)}/snapshot` : null,
@@ -373,7 +472,9 @@ export default function AdminAlgorithmsPage() {
                   </div>
                 </form>
 
-                {astar ? <AstarResult evaluation={astar} /> : null}
+                {astar && snapshot.data ? (
+                  <AstarResult evaluation={astar} snapshot={snapshot.data.snapshot} />
+                ) : null}
               </Card>
             </>
           ) : null}
@@ -410,6 +511,7 @@ export default function AdminAlgorithmsPage() {
               {knapsack ? (
                 <div className="evaluation">
                   <EvaluationNotices evaluation={knapsack} />
+                  <OptimalityNotice check={knapsack.result.optimalityCheck} />
                   <div className="table-wrap">
                     <table className="data-table">
                       <caption>Allocations from the exact DP</caption>
@@ -563,6 +665,16 @@ export default function AdminAlgorithmsPage() {
               {aco ? (
                 <div className="evaluation">
                   <EvaluationNotices evaluation={aco} />
+                  <TourSpreadTable rows={aco.result.tourStats} />
+                  <Suspense
+                    fallback={
+                      <div className="chart-canvas" role="status">
+                        Loading chart…
+                      </div>
+                    }
+                  >
+                    <AcoComparisonChart evaluation={aco} />
+                  </Suspense>
                   <div className="table-wrap">
                     <table className="data-table">
                       <caption>Routes measured by the run</caption>
@@ -631,7 +743,13 @@ export default function AdminAlgorithmsPage() {
   )
 }
 
-function AstarResult({ evaluation }: { evaluation: AstarEvaluation }) {
+function AstarResult({
+  evaluation,
+  snapshot,
+}: {
+  evaluation: AstarEvaluation
+  snapshot: ScenarioSnapshot
+}) {
   return (
     <div className="evaluation">
       <p className="metric-note">{evaluation.note}</p>
@@ -671,6 +789,16 @@ function AstarResult({ evaluation }: { evaluation: AstarEvaluation }) {
           </p>
         </article>
       </div>
+
+      <Suspense
+        fallback={
+          <div className="route-map__canvas route-map__loading" role="status">
+            Loading Karachi map…
+          </div>
+        }
+      >
+        <AstarRouteMap snapshot={snapshot} evaluation={evaluation} />
+      </Suspense>
     </div>
   )
 }

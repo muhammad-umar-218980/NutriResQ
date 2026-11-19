@@ -70,6 +70,9 @@ export default function BenchmarkTable({ benchmarks }: { benchmarks: BenchmarkRe
                       <th scope="col">Vehicle</th>
                       <th scope="col">Jobs</th>
                       <th scope="col">ACO cost</th>
+                      <th scope="col">Best tour</th>
+                      <th scope="col">Average tour</th>
+                      <th scope="col">Worst tour</th>
                       <th scope="col">Nearest-neighbour cost</th>
                       <th scope="col">ACO feasible</th>
                       <th scope="col">Baseline feasible</th>
@@ -83,6 +86,9 @@ export default function BenchmarkTable({ benchmarks }: { benchmarks: BenchmarkRe
                           <th scope="row">{String(vehicle.vehicleName ?? '—')}</th>
                           <td>{formatValue(vehicle.jobCount)}</td>
                           <td>{formatValue(vehicle.acoTotalCost)}</td>
+                          <td>{formatValue(vehicle.acoBestTourCost)}</td>
+                          <td>{formatValue(vehicle.acoAverageTourCost)}</td>
+                          <td>{formatValue(vehicle.acoWorstTourCost)}</td>
                           <td>{formatValue(vehicle.nearestNeighborTotalCost)}</td>
                           <td>{formatValue(vehicle.acoFeasible)}</td>
                           <td>{formatValue(vehicle.nearestNeighborFeasible)}</td>

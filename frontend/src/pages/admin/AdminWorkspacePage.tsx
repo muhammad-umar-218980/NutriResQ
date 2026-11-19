@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Suspense, lazy, useCallback, useState } from 'react'
 import type { FormEvent } from 'react'
 import BenchmarkTable from '../../components/app/BenchmarkTable'
 import RouteSchematic from '../../components/app/RouteSchematic'
@@ -24,6 +24,10 @@ import type {
   SnapshotResponse,
 } from '../../types/domain'
 import './AdminWorkspace.css'
+
+// Leaflet and its CSS only load when the workspace actually draws a map, so the
+// main bundle stays small and the schematic keeps working without them.
+const RouteMap = lazy(() => import('../../components/app/RouteMap'))
 
 interface RunForm {
   heuristic: 'projected-distance' | 'zero'
@@ -276,7 +280,11 @@ export default function AdminWorkspacePage() {
           </Card>
 
           {run ? (
-            <RunResultView run={run} snapshot={snapshot.data?.snapshot ?? null} />
+            <RunResultView
+              key={run.id}
+              run={run}
+              snapshot={snapshot.data?.snapshot ?? null}
+            />
           ) : snapshot.loading && !snapshot.data ? (
             <Card>
               <LoadingRows label="Loading scenario snapshot…" />
@@ -421,6 +429,15 @@ function ScenarioCard({
 }
 
 function RunResultView({ run, snapshot }: { run: RunDetail; snapshot: ScenarioSnapshot | null }) {
+  const [mapView, setMapView] = useState<'map' | 'schematic'>('map')
+  const [tilesUnavailable, setTilesUnavailable] = useState(false)
+
+  // Stable identity: changing this callback must not recreate the map.
+  const handleTilesUnavailable = useCallback(() => {
+    setTilesUnavailable(true)
+    setMapView('schematic')
+  }, [])
+
   const result = run.result
   if (!result) {
     return (
@@ -586,10 +603,56 @@ function RunResultView({ run, snapshot }: { run: RunDetail; snapshot: ScenarioSn
 
       {snapshot ? (
         <Card
-          title="Route schematic"
-          description="Stored locations and computed legs. The map is schematic; route costs come from A* on the road graph, not from these straight lines."
+          title="Route map"
+          description="Stored locations, available and closed roads, and the computed legs on an OpenStreetMap basemap — or the dependency-free schematic. Route costs come from A* on the road graph; the toggle changes the drawing only."
+          actions={
+            <div className="tab-row tab-row--inline" role="group" aria-label="Route view">
+              <button
+                type="button"
+                className={mapView === 'map' ? 'tab is-active' : 'tab'}
+                aria-pressed={mapView === 'map'}
+                onClick={() => {
+                  setTilesUnavailable(false)
+                  setMapView('map')
+                }}
+              >
+                Map
+              </button>
+              <button
+                type="button"
+                className={mapView === 'schematic' ? 'tab is-active' : 'tab'}
+                aria-pressed={mapView === 'schematic'}
+                onClick={() => setMapView('schematic')}
+              >
+                Schematic
+              </button>
+            </div>
+          }
         >
-          <RouteSchematic snapshot={snapshot} routes={result.routes} />
+          {tilesUnavailable ? (
+            <p className="notice notice--warning">
+              OpenStreetMap tiles could not be loaded, so the schematic is shown instead. The
+              schematic uses the same stored locations and computed legs and needs no network.
+            </p>
+          ) : null}
+
+          {mapView === 'map' ? (
+            <Suspense
+              fallback={
+                <div className="route-map__canvas route-map__loading" role="status">
+                  Loading map…
+                </div>
+              }
+            >
+              <RouteMap
+                snapshot={snapshot}
+                routes={result.routes}
+                onTilesUnavailable={handleTilesUnavailable}
+              />
+            </Suspense>
+          ) : (
+            <RouteSchematic snapshot={snapshot} routes={result.routes} />
+          )}
         </Card>
       ) : null}
 

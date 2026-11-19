@@ -1,0 +1,88 @@
+/* Charts: figures and their captions.
+   Tokens only, matching the desk palette in src/index.css. Imported by the
+   chart components so they style themselves on any page. */
+
+.chart-figure {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 6px;
+}
+
+.chart-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.chart-caption {
+  display: grid;
+  gap: 2px;
+  max-width: 78ch;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.chart-caption strong {
+  color: var(--olive-dark);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.chart-note {
+  max-width: 82ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.chart-note code {
+  padding: 1px 4px;
+  border-radius: var(--radius-s);
+  background: var(--cream);
+  font-size: 0.79rem;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px 24px;
+}
+
+.chart-panel {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+
+.chart-panel figcaption {
+  display: grid;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.chart-panel figcaption strong {
+  color: var(--olive-dark);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.chart-canvas {
+  width: 100%;
+  min-width: 0;
+}
+
+.recharts-wrapper {
+  font-family: var(--font-body);
+}
+
+.recharts-default-tooltip {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-m);
+  background: var(--white) !important;
+  color: var(--charcoal);
+  font-size: 0.82rem;
+}

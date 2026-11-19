@@ -65,6 +65,43 @@ export interface ACOConfig {
   useBestAnt: boolean;
 }
 
+/**
+ * Cost distribution of the ants inside one trial.
+ *
+ * Only tours that visit every feasible job are scored: an ant that gets stuck
+ * would otherwise contribute a small partial cost and flatter the average.
+ * When no ant completes the tour, the three costs are null and
+ * `completeTours` is 0.
+ */
+export interface ACOTrialStat {
+  /** 1-based trial number, matching the search order. */
+  trial: number;
+  ants: number;
+  completeTours: number;
+  bestCost: number | null;
+  averageCost: number | null;
+  worstCost: number | null;
+}
+
+/** Best / average / worst of every complete ant tour across all trials. */
+export interface ACOTourSummary {
+  bestTourCost: number | null;
+  averageTourCost: number | null;
+  worstTourCost: number | null;
+  completeTours: number;
+  totalTours: number;
+}
+
+export interface ACORouteOrderResult extends RouteOrderResult {
+  /** One entry per trial, in increasing trial order. */
+  trialStats: ACOTrialStat[];
+  tourSummary: ACOTourSummary;
+  antsPerTrial: number;
+  totalAnts: number;
+  coveredJobs: number;
+  jobCount: number;
+}
+
 /** ACO parameter defaults scaled to the stop count, with optional overrides. */
 export function createDefaultACOConfig(n: number, overrides?: Partial<ACOConfig>): ACOConfig {
   return {
@@ -128,7 +165,7 @@ export function optimizeRouteWithACO(
   jobs: RouteJob[],
   getCost: CostLookup,
   config: ACOConfig,
-): RouteOrderResult {
+): ACORouteOrderResult {
   const validation = validateACOConfig(config);
   if (!validation.valid) {
     throw new Error(`Invalid ACO configuration: ${validation.errors.join('; ')}`);
@@ -164,6 +201,18 @@ export function optimizeRouteWithACO(
       unreachableJobs,
       trials: config.numTrials,
       seed,
+      trialStats: [],
+      tourSummary: {
+        bestTourCost: null,
+        averageTourCost: null,
+        worstTourCost: null,
+        completeTours: 0,
+        totalTours: 0,
+      },
+      antsPerTrial: config.numAnts,
+      totalAnts: 0,
+      coveredJobs: 0,
+      jobCount: 0,
     };
   }
 
@@ -185,6 +234,9 @@ export function optimizeRouteWithACO(
   let bestCost = Infinity;
   let bestCovered = -1;
   let totalAnts = 0;
+  const trialStats: ACOTrialStat[] = [];
+  const completeTourCosts: number[] = [];
+  let totalTours = 0;
 
   for (let trial = 0; trial < config.numTrials; trial++) {
     const tours: Array<{ order: number[]; cost: number }> = [];
@@ -234,6 +286,29 @@ export function optimizeRouteWithACO(
       }
     }
 
+    // Score only complete tours so a stuck ant cannot pull the average down.
+    const complete = tours.filter(
+      (tour) => tour.order.length === m && Number.isFinite(tour.cost),
+    );
+    totalTours += tours.length;
+    let trialBest = Infinity;
+    let trialWorst = -Infinity;
+    let trialTotal = 0;
+    for (const tour of complete) {
+      completeTourCosts.push(tour.cost);
+      if (tour.cost < trialBest) trialBest = tour.cost;
+      if (tour.cost > trialWorst) trialWorst = tour.cost;
+      trialTotal += tour.cost;
+    }
+    trialStats.push({
+      trial: trial + 1,
+      ants: tours.length,
+      completeTours: complete.length,
+      bestCost: complete.length > 0 ? trialBest : null,
+      averageCost: complete.length > 0 ? trialTotal / complete.length : null,
+      worstCost: complete.length > 0 ? trialWorst : null,
+    });
+
     for (const pheromoneRow of pheromone) {
       for (let index = 0; index < m; index++) {
         pheromoneRow[index] *= 1 - config.evaporationRate;
@@ -260,6 +335,15 @@ export function optimizeRouteWithACO(
 
   const missing = feasible.filter((job) => !orderIds.includes(job.id));
 
+  let bestTourCost: number | null = null;
+  let worstTourCost: number | null = null;
+  let costTotal = 0;
+  for (const cost of completeTourCosts) {
+    if (bestTourCost === null || cost < bestTourCost) bestTourCost = cost;
+    if (worstTourCost === null || cost > worstTourCost) worstTourCost = cost;
+    costTotal += cost;
+  }
+
   return {
     order: evaluated.order,
     legs: evaluated.legs as RouteLeg[],
@@ -276,15 +360,20 @@ export function optimizeRouteWithACO(
     ],
     trials: config.numTrials,
     seed,
-    // Diagnostics kept on the object but outside the shared contract shape.
-    ...({
-      antsPerTrial: config.numAnts,
-      totalAnts,
-      coveredJobs: orderIds.length,
-      jobCount: feasible.length,
-      pheromoneRowCount: pheromone.length,
-    } as Record<string, unknown>),
-  } as RouteOrderResult;
+    trialStats,
+    tourSummary: {
+      bestTourCost,
+      averageTourCost:
+        completeTourCosts.length > 0 ? costTotal / completeTourCosts.length : null,
+      worstTourCost,
+      completeTours: completeTourCosts.length,
+      totalTours,
+    },
+    antsPerTrial: config.numAnts,
+    totalAnts,
+    coveredJobs: orderIds.length,
+    jobCount: feasible.length,
+  };
 }
 
 /** Nearest-neighbour baseline on the same job model and cost source (FR-32). */

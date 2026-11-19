@@ -51,6 +51,13 @@ export function projectLocations(locations: LocationRecord[]): Map<string, { x: 
 }
 
 /**
+ * Heuristic signature accepted by A* and Dijkstra. Node ids are always strings
+ * in the scenario data, but the search helpers accept `string | number`, so the
+ * heuristic has to accept both to stay assignable to them.
+ */
+export type Heuristic = (nodeId: string | number) => number;
+
+/**
  * Admissible heuristic for A* when road costs are kilometres:
  * straight-line distance (km) <= road path distance (km).
  * For any other cost unit the safe heuristic is zero.
@@ -59,7 +66,7 @@ export function buildHeuristic(
   costUnit: string,
   coords: Map<string, { x: number; y: number }>,
   goalId: string,
-): (nodeId: string) => number {
+): Heuristic {
   const normalized = costUnit.trim().toLowerCase();
   const isKm = normalized === 'km' || normalized === 'kilometre' || normalized === 'kilometer';
   if (!isKm) return () => 0;
@@ -67,8 +74,8 @@ export function buildHeuristic(
   const goal = coords.get(goalId);
   if (!goal) return () => 0;
 
-  return (nodeId: string) => {
-    const p = coords.get(nodeId);
+  return (nodeId: string | number) => {
+    const p = coords.get(String(nodeId));
     if (!p) return 0;
     return Math.hypot(p.x - goal.x, p.y - goal.y) / 1000;
   };

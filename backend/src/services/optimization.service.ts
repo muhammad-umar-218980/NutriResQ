@@ -35,6 +35,7 @@ import {
 } from '../algorithms/multiple-knapsack-dp';
 import type { RouteJob } from '../algorithms/lib/route';
 import type {
+  ACOTourStatRow,
   AlgorithmConfig,
   Allocation,
   BenchmarkRecord,
@@ -70,9 +71,20 @@ export interface OptimizationInput {
   runStartedAt: string;
 }
 
+export interface AllocationInstance {
+  /** Exactly the items handed to the DP, in the same order. */
+  items: Array<{ donationId: string; weightUnits: number; value: number }>;
+  capacities: number[];
+}
+
 export interface OptimizationOutcome {
   result: OptimizationResult;
   benchmarks: BenchmarkRecord[];
+  /**
+   * The DP input, exposed so the Algorithms lab can re-check optimality on the
+   * same instance instead of rebuilding (and possibly diverging from) it.
+   */
+  allocationInstance: AllocationInstance | null;
 }
 
 /**
@@ -157,6 +169,11 @@ function round(value: number, digits = 3): number {
   return Math.round(value * factor) / factor;
 }
 
+/** Rounding that keeps "not measured" as null instead of inventing a zero. */
+function roundOrNull(value: number | null, digits = 3): number | null {
+  return value === null ? null : round(value, digits);
+}
+
 function addWarning(warnings: Warning[], warning: Warning): void {
   if (!warnings.some((entry) => entry.code === warning.code && entry.message === warning.message)) {
     warnings.push(warning);
@@ -218,12 +235,10 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
   const heuristicFor = (goalId: string): ((nodeId: string | number) => number) => {
     const cached = heuristics.get(goalId);
     if (cached) return cached;
-    const base =
+    const heuristic: (nodeId: string | number) => number =
       config.astarHeuristic === 'zero'
         ? () => 0
         : buildHeuristic(roadUnit, projected, goalId);
-    const heuristic = (nodeId: string | number): number =>
-      base(typeof nodeId === 'string' ? nodeId : String(nodeId));
     heuristics.set(goalId, heuristic);
     return heuristic;
   };
@@ -268,6 +283,7 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
         allocations: [],
         unallocated: [],
         routes: [],
+        acoTours: [],
         unreachable: [],
         closestPair: null,
         warnings,
@@ -284,12 +300,19 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
         },
       },
       benchmarks,
+      allocationInstance: null,
     };
   }
 
   const candidateList: Candidate[] = [];
   const unallocated: UnallocatedPackage[] = [];
   let ruleEligibleCount = 0;
+
+  // Recipient availability is a documented eligibility rule: a package whose
+  // intended recipient is unavailable cannot be delivered, so it is reported
+  // instead of being allocated to a closed organisation. The seed keeps every
+  // recipient available, so this only fires when the simulator disables one.
+  const recipientById = new Map(snapshot.recipients.map((recipient) => [recipient.id, recipient]));
 
   for (const donation of snapshot.donations) {
     const fail = (reason: UnallocatedPackage['reason'], detail: string): void => {
@@ -305,6 +328,17 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
 
     if (!donation.isEligible) {
       fail('ineligible', 'Marked ineligible in the source data.');
+      continue;
+    }
+
+    const intendedRecipient = donation.recipientId
+      ? recipientById.get(donation.recipientId) ?? null
+      : null;
+    if (intendedRecipient && !intendedRecipient.isAvailable) {
+      fail(
+        'not_available',
+        `The intended recipient "${intendedRecipient.name}" is marked unavailable in this scenario.`,
+      );
       continue;
     }
     if (donation.status === 'reserved' || donation.status === 'unavailable') {
@@ -391,6 +425,15 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
     allocatable.push(candidate);
   }
 
+  const allocationInstance: AllocationInstance = {
+    items: allocatable.map((candidate) => ({
+      donationId: candidate.donation.id,
+      weightUnits: candidate.weightUnits,
+      value: candidate.value,
+    })),
+    capacities: usableVehicles.map((vehicle) => vehicle.capacityUnits),
+  };
+
   // 4. Exact multiple-knapsack DP.
   let dpResult: MultipleKnapsackResult | null = null;
   let greedyResult: ReturnType<typeof greedyKnapsackAllocation> | null = null;
@@ -428,6 +471,7 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
   const allocations: Allocation[] = [];
   const routes: VehicleRoute[] = [];
   const acoVehicleBenchmarks: Array<Record<string, unknown>> = [];
+  const acoTours: ACOTourStatRow[] = [];
   let acoTotalCost = 0;
   let nearestNeighborTotalCost = 0;
   let acoRuntimeMs = 0;
@@ -681,6 +725,11 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
       vehicleName: vehicle.name,
       jobCount: jobs.length,
       acoTotalCost: round(aco.totalCost, 6),
+      acoBestTourCost: roundOrNull(aco.tourSummary.bestTourCost, 6),
+      acoAverageTourCost: roundOrNull(aco.tourSummary.averageTourCost, 6),
+      acoWorstTourCost: roundOrNull(aco.tourSummary.worstTourCost, 6),
+      acoCompleteTours: aco.tourSummary.completeTours,
+      acoTotalTours: aco.tourSummary.totalTours,
       nearestNeighborTotalCost: round(nearestNeighbour.totalCost, 6),
       acoOrder: aco.order,
       nearestNeighborOrder: nearestNeighbour.order,
@@ -692,6 +741,14 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
       nearestNeighborRuntimeMs: round(vehicleNnMs, 3),
       seed: aco.seed,
       numTrials: aco.trials,
+    });
+
+    acoTours.push({
+      vehicleId: vehicle.id,
+      vehicleName: vehicle.name,
+      jobCount: jobs.length,
+      trialStats: aco.trialStats,
+      tourSummary: aco.tourSummary,
     });
   }
 
@@ -912,6 +969,22 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
   }
 
   if (acoVehicleBenchmarks.length > 0) {
+    // Fleet-level totals: the sum of each vehicle's own distribution. Vehicles
+    // with no complete tour are excluded and counted, never silently zeroed.
+    const measuredTours = acoTours.filter((entry) => entry.tourSummary.completeTours > 0);
+    const fleetTotal = (
+      pick: (summary: ACOTourStatRow['tourSummary']) => number | null,
+    ): number | null =>
+      measuredTours.length === 0
+        ? null
+        : round(
+            measuredTours.reduce(
+              (total, entry) => total + (pick(entry.tourSummary) ?? 0),
+              0,
+            ),
+            6,
+          );
+
     benchmarks.push({
       algorithmName: 'aco',
       baselineName: 'nearest-neighbor',
@@ -927,6 +1000,10 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
       },
       resultSummary: {
         acoTotalCost: round(acoTotalCost, 6),
+        acoBestTourCost: fleetTotal((summary) => summary.bestTourCost),
+        acoAverageTourCost: fleetTotal((summary) => summary.averageTourCost),
+        acoWorstTourCost: fleetTotal((summary) => summary.worstTourCost),
+        acoToursMeasuredOn: `${measuredTours.length} of ${acoTours.length} vehicle(s)`,
         nearestNeighborTotalCost: round(nearestNeighborTotalCost, 6),
         acoRuntimeMs: round(acoRuntimeMs, 3),
         nearestNeighborRuntimeMs: round(nearestNeighborRuntimeMs, 3),
@@ -1013,6 +1090,7 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
     allocations,
     unallocated,
     routes,
+    acoTours,
     unreachable,
     closestPair,
     warnings,
@@ -1030,5 +1108,5 @@ export function runOptimization(input: OptimizationInput): OptimizationOutcome {
   };
 
   // Benchmark runtime fields are measured, never asserted.
-  return { result, benchmarks };
+  return { result, benchmarks, allocationInstance };
 }

@@ -1,5 +1,6 @@
 import { query } from '../db/pool';
 import { projectLocations } from '../algorithms/lib/graph';
+import { toPolyline } from './road-geometry';
 import type {
   DonationRecord,
   DonorRecord,
@@ -46,6 +47,7 @@ interface RoadRow {
   cost_unit: string;
   is_available: boolean;
   is_bidirectional: boolean;
+  geometry: unknown;
 }
 
 interface DonorRow {
@@ -255,6 +257,7 @@ export async function loadScenarioSnapshot(
     costUnit: row.cost_unit,
     isAvailable: row.is_available,
     isBidirectional: row.is_bidirectional,
+    geometry: toPolyline(row.geometry),
   }));
 
   const donors = donorResult.rows.map<DonorRecord>((row) => ({

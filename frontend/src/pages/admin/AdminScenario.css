@@ -1,0 +1,100 @@
+/* Scenario simulator ------------------------------------------------------- */
+
+.sim-panel {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+
+.sim-input {
+  width: 110px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--white);
+  font: inherit;
+  font-size: 0.86rem;
+  color: var(--charcoal);
+}
+
+select.sim-input {
+  width: 140px;
+}
+
+.sim-input:hover {
+  border-color: var(--olive-light);
+}
+
+.sim-input:focus-visible {
+  outline: 2px solid var(--rust);
+  outline-offset: 1px;
+  border-color: var(--rust);
+}
+
+/* The save button sits next to the capacity input it belongs to. */
+.data-table td .sim-input + .btn-secondary {
+  margin-left: 8px;
+}
+
+.sim-compare-controls {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  margin-bottom: 20px;
+}
+
+/* Verdict colours reuse the semantic tokens; the text is always present so the
+   meaning never depends on colour alone. */
+.sim-verdict {
+  text-transform: lowercase;
+}
+
+.sim-verdict--better {
+  background: color-mix(in srgb, var(--olive) 18%, var(--white));
+  color: var(--olive-dark, var(--charcoal));
+}
+
+.sim-verdict--worse {
+  background: color-mix(in srgb, var(--rust) 16%, var(--white));
+  color: var(--rust-dark);
+}
+
+.sim-verdict--same {
+  background: var(--light-beige);
+  color: var(--muted);
+}
+
+.sim-notes {
+  display: grid;
+  gap: 6px;
+  margin: 16px 0 0;
+  padding-left: 18px;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.sim-change {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.notice--success {
+  border-color: var(--olive-light);
+  background: color-mix(in srgb, var(--olive) 12%, var(--white));
+  color: var(--charcoal);
+}
+
+@media (max-width: 640px) {
+  .sim-input,
+  select.sim-input {
+    width: 100%;
+  }
+
+  .data-table td .sim-input + .btn-secondary {
+    margin: 8px 0 0;
+  }
+}
